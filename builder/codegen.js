@@ -185,6 +185,8 @@ function generateIndexDefinition (id, index) {
   str += `  name: ${s(index.fqn)},\n`
   str += `  encodeKey: ${generateEncodeIndexKey(id, index)},\n`
   str += `  encodeKeyRange: ${generateEncodeKeyRange(id, index)},\n`
+  str += `  encodeValue: (doc) => ${id}.encodeKey(doc),\n`
+  str += '  reconstruct: (keyBuf, valueBuf) => valueBuf,\n'
   str += '  offset: 0,\n'
   str += '  collection: null\n'
   str += '}\n'

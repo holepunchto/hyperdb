@@ -5,12 +5,14 @@ const b4a = require('b4a')
 const RocksEngine = require('./lib/engine/rocks')
 
 class HyperDB {
-  constructor (engine, definition, { version = definition.version } = {}) {
+  constructor (engine, definition, { version = definition.version, snapshot = null, updates = new Map() } = {}) {
     this.version = version
     this.engine = engine
+    this.engineSnapshot = snapshot
     this.definition = definition
-    this.updates = new Map()
+    this.updates = updates
     this.clocked = 0
+    this.copyUpdates = false
   }
 
   static rocksdb (storage, definition) {
@@ -19,6 +21,15 @@ class HyperDB {
 
   get updated () {
     return this.updates.size > 0
+  }
+
+  snapshot () {
+    this.copyUpdates = true
+    return new HyperDB(this.engine, this.definition, {
+      version: this.version,
+      snapshot: this.engine.openSnapshot(),
+      updates: this.updates
+    })
   }
 
   query (indexName, q = {}, options) {
@@ -35,6 +46,7 @@ class HyperDB {
 
     const range = index === null ? collection.encodeKeyRange(q) : index.encodeKeyRange(q)
     const engine = this.engine
+    const engineSnapshot = this.engineSnapshot
     const overlay = []
 
     if (index === null) {
@@ -51,7 +63,7 @@ class HyperDB {
 
     overlay.sort(reverse ? reverseSortOverlay : sortOverlay)
 
-    const stream = engine.createReadStream(range, { reverse, limit })
+    const stream = engine.createReadStream(engineSnapshot, range, { reverse, limit })
 
     return new IndexStream(stream, { asap: engine.asap, decode, reverse, limit, overlay, map: index === null ? null : map })
 
@@ -60,7 +72,7 @@ class HyperDB {
     }
 
     function map (entries) {
-      return engine.getRange(entries)
+      return engine.getRange(engineSnapshot, entries)
     }
   }
 
@@ -86,16 +98,30 @@ class HyperDB {
     const hex = b4a.toString(key, 'hex')
     const u = this.updates.get(hex)
     if (u) return u.value
-    return this.engine.get(key)
+    return this.engine.get(this.engineSnapshot, key)
+  }
+
+  _copyUpdatesNow () {
+    const entries = new Array(this.updates.size)
+
+    let i = 0
+    for (const [key, u] of this.updates) {
+      entries[i++] = [key, { key: u.key, value: u.value, indexes: u.indexes.slice(0) }]
+    }
+
+    this.updated = new Map(entries)
+    this.copyUpdates = false
   }
 
   async delete (collectionName, doc) {
+    if (this.copyUpdates === true) this._copyUpdatesNow()
+
     const collection = this.definition.resolveCollection(collectionName)
     if (collection === null) return
 
     const key = collection.encodeKey(doc)
 
-    const prevValue = await this.engine.get(key)
+    const prevValue = await this.engine.get(this.engineSnapshot, key)
     if (prevValue === null) return
 
     const prevDoc = collection.reconstruct(this.version, key, prevValue)
@@ -120,13 +146,15 @@ class HyperDB {
   }
 
   async insert (collectionName, doc) {
+    if (this.copyUpdates === true) this._copyUpdatesNow()
+
     const collection = this.definition.resolveCollection(collectionName)
     if (collection === null) throw new Error('Unknown collection: ' + collectionName)
 
     const key = collection.encodeKey(doc)
     const value = collection.encodeValue(this.version, doc)
 
-    const prevValue = await this.engine.get(key)
+    const prevValue = await this.engine.get(this.engineSnapshot, key)
     if (prevValue !== null && b4a.equals(value, prevValue)) return
 
     const prevDoc = prevValue === null ? null : collection.reconstruct(this.version, key, prevValue)
@@ -155,9 +183,11 @@ class HyperDB {
   }
 
   async flush () {
+    if (this.copyUpdates === true) this._copyUpdatesNow()
     if (this.clocked !== this.engine.clock) throw new Error('Database has changed, refusing to commit')
     await this.engine.commit(this.updates)
     this.clocked = this.engine.clock
+    this.updates.clear()
   }
 
   async close () {

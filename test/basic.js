@@ -14,7 +14,7 @@ test('basic full example on rocks', async function (t) {
   await db.flush()
 
   {
-    const result = await collect(db.query('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }))
+    const result = await collect(db.find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }))
     t.alike(result, [
       { id: 'andrew', age: 34 },
       { id: 'maf', age: 34 }
@@ -25,7 +25,7 @@ test('basic full example on rocks', async function (t) {
   await db.insert('members', { id: 'maf', age: 37 })
 
   {
-    const result = await collect(db.query('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }))
+    const result = await collect(db.find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }))
     t.alike(result, [
       { id: 'andrew', age: 34 },
       { id: 'maf', age: 37 }
@@ -33,7 +33,7 @@ test('basic full example on rocks', async function (t) {
   }
 
   {
-    const result = await collect(db.query('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }, { reverse: true }))
+    const result = await collect(db.find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }, { reverse: true }))
     t.alike(result, [
       { id: 'maf', age: 37 },
       { id: 'andrew', age: 34 }
@@ -41,7 +41,7 @@ test('basic full example on rocks', async function (t) {
   }
 
   {
-    const result = await collect(db.query('members'))
+    const result = await collect(db.find('members'))
     t.alike(result, [
       { id: 'andrew', age: 34 },
       { id: 'anna', age: 32 },
@@ -66,14 +66,14 @@ test('delete record', async function (t) {
   await db.delete('members', { id: 'maf' })
 
   {
-    const result = await collect(db.query('members'))
+    const result = await collect(db.find('members'))
     t.alike(result, [
       { id: 'andrew', age: 34 }
     ])
   }
 
   {
-    const result = await collect(db.query('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }))
+    const result = await collect(db.find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }))
     t.alike(result, [
       { id: 'andrew', age: 34 }
     ])
@@ -82,14 +82,14 @@ test('delete record', async function (t) {
   await db.flush()
 
   {
-    const result = await collect(db.query('members'))
+    const result = await collect(db.find('members'))
     t.alike(result, [
       { id: 'andrew', age: 34 }
     ])
   }
 
   {
-    const result = await collect(db.query('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }))
+    const result = await collect(db.find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }))
     t.alike(result, [
       { id: 'andrew', age: 34 }
     ])
@@ -110,7 +110,7 @@ test('generated full example on rocks', async function (t) {
   await db.flush()
 
   {
-    const result = await collect(db.query('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }))
+    const result = await collect(db.find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }))
     t.alike(result, [
       { id: 'andrew', age: 34 },
       { id: 'maf', age: 34 }
@@ -121,7 +121,7 @@ test('generated full example on rocks', async function (t) {
   await db.insert('@db/members', { id: 'maf', age: 37 })
 
   {
-    const result = await collect(db.query('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }))
+    const result = await collect(db.find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }))
     t.alike(result, [
       { id: 'andrew', age: 34 },
       { id: 'maf', age: 37 }
@@ -129,7 +129,7 @@ test('generated full example on rocks', async function (t) {
   }
 
   {
-    const result = await collect(db.query('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }, { reverse: true }))
+    const result = await collect(db.find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }, { reverse: true }))
     t.alike(result, [
       { id: 'maf', age: 37 },
       { id: 'andrew', age: 34 }
@@ -137,7 +137,7 @@ test('generated full example on rocks', async function (t) {
   }
 
   {
-    const result = await collect(db.query('@db/members'))
+    const result = await collect(db.find('@db/members'))
     t.alike(result, [
       { id: 'andrew', age: 34 },
       { id: 'anna', age: 32 },
@@ -162,14 +162,14 @@ test('generated delete record', async function (t) {
   await db.delete('@db/members', { id: 'maf' })
 
   {
-    const result = await collect(db.query('@db/members'))
+    const result = await collect(db.find('@db/members'))
     t.alike(result, [
       { id: 'andrew', age: 34 }
     ])
   }
 
   {
-    const result = await collect(db.query('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }))
+    const result = await collect(db.find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }))
     t.alike(result, [
       { id: 'andrew', age: 34 }
     ])
@@ -178,14 +178,14 @@ test('generated delete record', async function (t) {
   await db.flush()
 
   {
-    const result = await collect(db.query('@db/members'))
+    const result = await collect(db.find('@db/members'))
     t.alike(result, [
       { id: 'andrew', age: 34 }
     ])
   }
 
   {
-    const result = await collect(db.query('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }))
+    const result = await collect(db.find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }))
     t.alike(result, [
       { id: 'andrew', age: 34 }
     ])

@@ -80,6 +80,7 @@ const membersByAgeIndex = {
 membersCollection.indexes.push(membersByAgeIndex)
 
 module.exports = {
+  version: 0,
   resolveCollection (name) {
     if (name === membersCollection.name) return membersCollection
     return null

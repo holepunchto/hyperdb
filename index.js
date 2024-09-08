@@ -90,7 +90,7 @@ class Updates {
 class HyperDB {
   constructor (engine, definition, {
     version = definition.version,
-    snapshot = null,
+    snapshot = engine.snapshot(),
     updates = new Updates([])
   } = {}) {
     this.version = version
@@ -104,6 +104,10 @@ class HyperDB {
     this._engineClock = engine.clock
 
     engine.refs++
+  }
+
+  static isDefinition (definition) {
+    return !!(definition && typeof definition.resolveCollection === 'function')
   }
 
   static rocksdb (storage, definition, opts) {
@@ -277,9 +281,15 @@ class HyperDB {
     if (this.updates.size === 0) return
     if (this._engineClock !== this.engine.clock) throw new Error('Database has changed, refusing to commit')
     if (this.updates.refs > 1) this.updates = this.updates.detach()
+
     await this.engine.commit(this.updates)
     this._engineClock = this.engine.clock
     this.updates.clear()
+
+    if (this._engineSnapshot) {
+      this._engineSnapshot.unref()
+      this._engineSnapshot = this.engine.snapshot()
+    }
   }
 }
 

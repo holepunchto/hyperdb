@@ -77,9 +77,9 @@ function index0_indexify (record) {
 const index0 = {
   _collectionName: '@db/members',
   name: '@db/members-by-age',
-  encodeKey: function encodeKey (record) {
+  encodeKeys: function encodeKeys (record) {
     const key = [record.age, record.id]
-    return index0_key.encode(key)
+    return [index0_key.encode(key)]
   },
   encodeKeyRange: function encodeKeyRange ({ gt, lt, gte, lte } = {}) {
     return index0_key.encodeRange({

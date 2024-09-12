@@ -40,8 +40,8 @@ const membersCollection = {
 const membersByAgeIndex = {
   name: 'members/by-age',
   offset: 0,
-  encodeKey (doc) {
-    return memberByAge.encode([doc.age, doc.id])
+  encodeKeys (doc) {
+    return [memberByAge.encode([doc.age, doc.id])]
   },
   encodeKeyRange (range) {
     const r = {

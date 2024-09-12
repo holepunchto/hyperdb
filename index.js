@@ -289,12 +289,12 @@ class HyperDB {
 
     for (let i = 0; i < collection.indexes.length; i++) {
       const idx = collection.indexes[i]
-      const prevKey = idx.encodeKey(prevDoc)
+      const del = idx.encodeKeys(prevDoc)
       const ups = []
 
       u.indexes.push(ups)
 
-      if (prevKey !== null) ups.push({ key: prevKey, value: null })
+      for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
     }
   }
 
@@ -325,16 +325,17 @@ class HyperDB {
 
     for (let i = 0; i < collection.indexes.length; i++) {
       const idx = collection.indexes[i]
-      const prevKey = prevDoc && idx.encodeKey(prevDoc)
-      const nextKey = idx.encodeKey(doc)
+      const prevKeys = prevDoc ? idx.encodeKeys(prevDoc) : []
+      const nextKeys = idx.encodeKeys(doc)
       const ups = []
 
       u.indexes.push(ups)
 
-      if (prevKey !== null && b4a.equals(nextKey, prevKey)) continue
+      const [del, put] = diffKeys(prevKeys, nextKeys)
+      const value = put.length === 0 ? null : idx.encodeValue(doc)
 
-      if (prevKey !== null) ups.push({ key: prevKey, value: null })
-      if (nextKey !== null) ups.push({ key: nextKey, value: idx.encodeValue(doc) })
+      for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
+      for (let j = 0; j < put.length; j++) ups.push({ key: put[j], value })
     }
   }
 
@@ -382,12 +383,55 @@ function withinRange (range, key) {
   return true
 }
 
+function sortKeys (a, b) {
+  return b4a.compare(a, b)
+}
+
 function sortOverlay (a, b) {
   return b4a.compare(a.key, b.key)
 }
 
 function reverseSortOverlay (a, b) {
   return b4a.compare(b.key, a.key)
+}
+
+function diffKeys (a, b) {
+  if (a.length === 0 || b.length === 0) return [a, b]
+
+  // 90% of all indexes
+  if (a.length === 1 && b.length === 1) {
+    return b4a.equals(a[0], b[0]) ? [[], []] : [a, b]
+  }
+
+  a.sort(sortKeys)
+  b.sort(sortKeys)
+
+  const res = [[], []]
+  let ai = 0
+  let bi = 0
+
+  while (true) {
+    if (ai < a.length && bi < b.length) {
+      const cmp = b4a.compare(a[bi], b[bi])
+
+      if (cmp === 0) {
+        ai++
+        bi++
+      } else if (cmp < 0) {
+        res[0].push(a[ai++])
+      } else {
+        res[1].push(b[bi++])
+      }
+
+      continue
+    }
+
+    if (ai < a.length) res[0].push(a[ai++])
+    else if (bi < b.length) res[1].push(b[bi++])
+    else break
+  }
+
+  return res
 }
 
 module.exports = HyperDB

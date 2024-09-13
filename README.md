@@ -83,6 +83,10 @@ Alias for `await find(...).one()`
 
 Get a document from a collection
 
+#### `{ count } = await db.stats(collectionOrIndex)`
+
+Get stats, about a collection or index with stats enabled.
+
 #### `await db.insert(collection, doc)`
 
 Insert a document into a collection. NOTE: you have to flush the db later for this to be persisted.

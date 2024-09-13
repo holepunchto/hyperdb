@@ -324,8 +324,16 @@ class HyperDB {
     return st
   }
 
-  _encodeStatsKey (target) {
-    return this.definition.resolveCollection(STATS).encodeKey({ id: target.id })
+  async _getPrev (key, collection) {
+    const st = collection.stats === true ? this.updates.prestats(collection) : null
+    if (st !== null && !st.promise) {
+      st.key = this.definition.resolveCollection(STATS).encodeKey({ id: collection.id })
+      st.promise = this.engine.get(this.engineSnapshot, st.key)
+      st.promise.catch(noop) // handled below
+    }
+    const value = await this.engine.get(this.engineSnapshot, key)
+    if (st !== null) st.value = await st.promise
+    return value
   }
 
   async delete (collectionName, doc) {
@@ -341,14 +349,7 @@ class HyperDB {
     let prevValue = null
     this.updates.mutating++
     try {
-      const st = collection.stats === true ? this.updates.prestats(collection) : null
-      if (st !== null && !st.promise) {
-        st.key = this._encodeStatsKey(collection)
-        st.promise = this.engine.get(this.engineSnapshot, st.key)
-        st.promise.catch(noop) // handled below
-      }
-      prevValue = await this.engine.get(this.engineSnapshot, key)
-      if (st !== null) st.value = await st.promise
+      prevValue = await this._getPrev(key, collection)
     } finally {
       this.updates.mutating--
     }
@@ -387,14 +388,7 @@ class HyperDB {
     let prevValue = null
     this.updates.mutating++
     try {
-      const st = collection.stats === true ? this.updates.prestats(collection) : null
-      if (st !== null && !st.promise) {
-        st.key = this._encodeStatsKey(collection)
-        st.promise = this.engine.get(this.engineSnapshot, st.key)
-        st.promise.catch(noop) // handled below
-      }
-      prevValue = await this.engine.get(this.engineSnapshot, key)
-      if (st !== null) st.value = await st.promise
+      prevValue = await this._getPrev(key, collection)
     } finally {
       this.updates.mutating--
     }
@@ -445,7 +439,9 @@ class HyperDB {
       const stats = value === null ? { count: 0 } : statsCollection.reconstruct(key, value)
       const overlay = this.updates.collectionStatsOverlay(collection)
       stats.count += overlay.count
-      this.updates.update(statsCollection, key, statsCollection.encodeValue(this.version, stats))
+      const updatedValue = statsCollection.encodeValue(this.version, stats)
+      if (value !== null && b4a.equal(value, updatedValue)) continue
+      this.updates.update(statsCollection, key, updatedValue)
     }
   }
 

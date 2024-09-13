@@ -284,7 +284,7 @@ class HyperDB {
     }
 
     function map (entries) {
-      return engine.getRange(snap, entries)
+      return engine.getIndirectRange(snap, entries)
     }
   }
 
@@ -325,13 +325,23 @@ class HyperDB {
 
   async _getPrev (key, collection) {
     const st = collection.stats === true ? this.updates.prestats(collection) : null
-    if (st !== null && !st.promise) {
-      st.key = this.definition.resolveCollection(STATS).encodeKey({ id: collection.id })
-      st.promise = this.engine.get(this.engineSnapshot, st.key)
-      st.promise.catch(noop) // handled below
+
+    if (st !== null && !st.promise && !st.value) {
+      const statsCollection = this.definition.resolveCollection(STATS)
+
+      st.key = statsCollection.encodeKey({ id: collection.id })
+      st.promise = this.engine.getBatch(this.engineSnapshot, [key, st.key])
+
+      const [value, stats] = await st.promise
+
+      st.value = stats === null ? statsCollection.encodeValue(this.version, { count: 0 }) : stats
+      st.promise = null
+
+      return value
     }
+
     const value = await this.engine.get(this.engineSnapshot, key)
-    if (st !== null) st.value = await st.promise
+    if (st !== null && st.promise !== null) await st.promise
     return value
   }
 
@@ -435,11 +445,11 @@ class HyperDB {
   _applyStats () {
     const statsCollection = this.definition.resolveCollection(STATS)
     for (const [collection, { key, value }] of this.updates.stats) {
-      const stats = value === null ? { count: 0 } : statsCollection.reconstruct(key, value)
+      const stats = statsCollection.reconstruct(this.version, key, value)
       const overlay = this.updates.collectionStatsOverlay(collection)
       stats.count += overlay.count
       const updatedValue = statsCollection.encodeValue(this.version, stats)
-      if (value !== null && b4a.equal(value, updatedValue)) continue
+      if (b4a.equals(value, updatedValue)) continue
       this.updates.update(statsCollection, key, updatedValue)
     }
   }
@@ -524,7 +534,5 @@ function diffKeys (a, b) {
 
   return res
 }
-
-function noop () {}
 
 module.exports = HyperDB

@@ -20,6 +20,7 @@ class DBType {
     this.key = description.key
     this.fullKey = []
 
+    this.isMapped = false
     this.isIndex = false
     this.isCollection = false
 
@@ -64,20 +65,23 @@ class Collection extends DBType {
   constructor (builder, namespace, description) {
     super(builder, namespace, description)
     this.isCollection = true
+    this.derived = !!description.derived
     this.indexes = []
 
     this.schema = this.builder.schema.resolve(description.schema)
     if (!this.schema) throw new Error('Schema not found: ' + description.schema)
 
-    this.key = description.key
+    this.key = description.key || []
     this.fullKey = this.key
 
     this.keyEncoding = []
     this.valueEncoding = this.fqn + '/value'
-    for (const component of this.key) {
-      const field = this.schema.fieldsByName.get(component)
-      const resolvedType = this.builder.schema.resolve(field.type.fqn, { aliases: false })
-      this.keyEncoding.push(resolvedType.name)
+    if (this.key.length) {
+      for (const component of this.key) {
+        const field = this.schema.fieldsByName.get(component)
+        const resolvedType = this.builder.schema.resolve(field.type.fqn, { aliases: false })
+        this.keyEncoding.push(resolvedType.name)
+      }
     }
 
     // Register a value encoding type (the portion of the record that will not be in the primary key)
@@ -98,6 +102,7 @@ class Collection extends DBType {
       type: COLLECTION_TYPE,
       indexes: this.indexes.map(i => i.fqn),
       schema: this.schema.fqn,
+      derived: this.derived,
       key: this.key
     }
   }
@@ -108,24 +113,44 @@ class Index extends DBType {
     super(builder, namespace, description)
     this.isIndex = true
     this.unique = !!description.unique
+    this.isMapped = !Array.isArray(description.key)
+
     this.collection = this.builder.typesByName.get(description.collection)
     this.keyEncoding = []
-
-    this.key = description.key
-    this.fullKey = [...this.key]
 
     if (!this.collection || !this.collection.isCollection) {
       throw new Error('Invalid index target: ' + description.collection)
     }
     this.collection.indexes.push(this)
 
-    // Key encoding will be an IndexEncoder of the secondary index's key fields
-    // If the key is not unique, then the primary key should also be included
-    for (const component of this.key) {
-      const resolvedType = this._resolveKey(this.collection.schema, component)
-      this.keyEncoding.push(resolvedType.name)
+    this.key = description.key
+    this.fullKey = null
+
+    this.map = null
+    if (this.isMapped) {
+      this.map = (typeof this.key.map === 'function') ? this.key.map.toString() : this.key.map
     }
-    if (!this.unique) {
+
+    // Key encoding will be an IndexEncoder of the secondary index's key fields
+    // If an Array is provided, the keys are intepreted as fields from the source collection
+    // This can be overridden by providing { type, map } options to the key field
+    if (Array.isArray(this.key)) {
+      this.fullKey = [...this.key]
+      for (const component of this.key) {
+        const resolvedType = this._resolveKey(this.collection.schema, component)
+        this.keyEncoding.push(resolvedType.name)
+      }
+    } else {
+      this.fullKey = []
+      for (const field of this.key.type.fields) {
+        const resolvedType = this.builder.schema.resolve(field.type, { aliases: false })
+        this.keyEncoding.push(resolvedType.name)
+        this.fullKey.push(field.name)
+      }
+    }
+
+    // If the key is not unique, then the primary key should also be included
+    if (!this.unique && !this.isMapped) {
       for (let i = 0; i < this.collection.keyEncoding.length; i++) {
         this.keyEncoding.push(this.collection.keyEncoding[i])
         this.fullKey.push(this.collection.key[i])
@@ -139,7 +164,12 @@ class Index extends DBType {
       type: INDEX_TYPE,
       collection: this.description.collection,
       unique: this.unique,
-      key: this.key
+      key: Array.isArray(this.key)
+        ? this.key
+        : {
+            type: this.key.type,
+            map: (typeof this.key.map === 'function') ? this.key.map.toString() : this.key.map
+          }
     }
   }
 }

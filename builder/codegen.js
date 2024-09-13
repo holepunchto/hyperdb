@@ -24,6 +24,7 @@ const type = contract.resolveIndex('@keet/devices-by-name')
 */
 
 const gen = require('generate-object-property')
+const genFunc = require('generate-function')
 const s = require('generate-string')
 
 const IndexTypeMap = new Map([
@@ -129,6 +130,13 @@ function generateCommonPrefix (id, type) {
   str += `const ${id}_key = ${generateIndexKeyEncoding(type)}\n`
   str += '\n'
 
+  if (type.isMapped) {
+    const fn = genFunc()
+    fn(type.map)
+    str += `const ${id}_map = ${fn.toFunction()}\n`
+    str += '\n'
+  }
+
   str += `function ${id}_indexify (record) {\n`
   str += '  const arr = []\n'
   str += '\n'
@@ -228,22 +236,30 @@ function generateEncodeCollectionKey (id, collection) {
 
 function generateEncodeIndexKeys (id, index) {
   const accessors = index.fullKey.map(c => {
-    return c.split('.').reduce(gen, 'record')
+    return c.split('.').reduce(gen, 'structKey')
   })
   let str = ''
-  str += 'function encodeKeys (record) {\n'
-  str += `    const key = [${accessors.join(', ')}]\n`
-  str += `    return [${id + '_key'}.encode(key)]\n`
+  str += 'function encodeKeys (record, context) {\n'
+  str += '    const keys = []\n'
+  if (index.isMapped) {
+    str += `    const mapped = ${id}_map(record, context)\n`
+  } else {
+    str += '    const mapped = [record]\n'
+  }
+  str += '    for (const structKey of mapped) {\n'
+  str += `      keys.push(${id + '_key'}.encode([${accessors.join(', ')}]))\n`
+  str += '    }\n'
+  str += '    return keys\n'
   str += '  }'
   return str
 }
 
 function generateIndexKeyEncoding (type) {
   let str = 'new IndexEncoder([\n'
-  for (let i = 0; i < type.fullKey.length; i++) {
+  for (let i = 0; i < type.keyEncoding.length; i++) {
     const component = type.keyEncoding[i]
     str += '  ' + IndexTypeMap.get(component)
-    if (i !== type.fullKey.length - 1) str += ',\n'
+    if (i !== type.keyEncoding.length - 1) str += ',\n'
     else str += '\n'
   }
   str += `], { prefix: ${type.id} })`

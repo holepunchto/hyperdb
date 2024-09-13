@@ -19,9 +19,10 @@
   "dependencies": {
     "b4a": "^1.6.6",
     "compact-encoding": "^2.15.0",
-    "hyperschema": "^0.0.14",
+    "generate-function": "^2.3.1",
     "generate-object-property": "^2.0.0",
     "generate-string": "^1.0.1",
+    "hyperschema": "^0.0.14",
     "rocksdb-native": "^2.3.1",
     "streamx": "^2.20.0"
   },

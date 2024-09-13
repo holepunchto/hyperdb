@@ -123,6 +123,14 @@ module.exports = function generateCode (hyperdb) {
   return str
 }
 
+function toArrayFunction (fn) {
+  const i = fn.indexOf('(')
+  const isArrow = !fn.slice(0, i).includes('function')
+  fn = fn.slice(i)
+  if (isArrow) return fn
+  return fn.replace('{', '=> {')
+}
+
 function generateCommonPrefix (id, type) {
   let str = ''
 
@@ -133,7 +141,7 @@ function generateCommonPrefix (id, type) {
   if (type.isMapped) {
     const fn = genFunc()
     fn(type.map)
-    str += `const ${id}_map = ${fn.toFunction()}\n`
+    str += `const ${id}_map = ${toArrayFunction(fn.toString())}\n`
     str += '\n'
   }
 
@@ -235,21 +243,25 @@ function generateEncodeCollectionKey (id, collection) {
 }
 
 function generateEncodeIndexKeys (id, index) {
-  const accessors = index.fullKey.map(c => {
-    return c.split('.').reduce(gen, 'structKey')
-  })
   let str = ''
   str += 'function encodeKeys (record, context) {\n'
-  str += '    const keys = []\n'
   if (index.isMapped) {
+    const accessors = index.fullKey.map(c => {
+      return c.split('.').reduce(gen, 'structKey')
+    })
     str += `    const mapped = ${id}_map(record, context)\n`
+    str += '    const keys = new Array(mapped.length)\n'
+    str += '    for (let i = 0; i < keys.length; i++) {\n'
+    str += '      const structKey = mapped[i]\n'
+    str += `      keys[i] = ${id + '_key'}.encode([${accessors.join(', ')}])\n`
+    str += '    }\n'
+    str += '    return keys\n'
   } else {
-    str += '    const mapped = [record]\n'
+    const accessors = index.fullKey.map(c => {
+      return c.split('.').reduce(gen, 'record')
+    })
+    str += `    return [${id + '_key'}.encode([${accessors.join(', ')}])]\n`
   }
-  str += '    for (const structKey of mapped) {\n'
-  str += `      keys.push(${id + '_key'}.encode([${accessors.join(', ')}]))\n`
-  str += '    }\n'
-  str += '    return keys\n'
   str += '  }'
   return str
 }

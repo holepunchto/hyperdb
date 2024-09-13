@@ -94,7 +94,6 @@ module.exports = function generateCode (hyperdb) {
   str += 'for (const index of IndexMap.values()) {\n'
   str += '  const collection = index.collection\n'
   str += '  collection.indexes.push(index)\n'
-  str += '  index.collection = collection\n'
   str += '  index.offset = collection.indexes.length - 1\n'
   str += '}\n'
   str += '\n'

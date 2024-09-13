@@ -311,7 +311,6 @@ class HyperDB {
     const index = collection === null ? this.definition.resolveIndex(indexName) : null
 
     if (collection === null && index === null) throw new Error('Unknown index: ' + indexName)
-    if (index) throw new Error('Only support')
 
     const target = collection || index
     const st = await this.get(STATS, { id: target.id })

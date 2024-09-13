@@ -174,7 +174,6 @@ class BuilderNamespace {
 
     this.collections = new BuilderCollections(this)
     this.indexes = new BuilderIndexes(this)
-    this.schema = this.builder.schema.namespace(this.name)
 
     this.descriptions = []
   }
@@ -188,10 +187,10 @@ class BuilderNamespace {
 }
 
 class Builder {
-  constructor (schema, dbJson, { dbDir = null, schemaDir = null } = {}) {
+  constructor (schema, dbJson, { offset, dbDir = null, schemaDir = null } = {}) {
     this.schema = schema
     this.version = dbJson ? dbJson.version : 0
-    this.offset = dbJson ? dbJson.offset : 0
+    this.offset = dbJson ? dbJson.offset : (offset || 0)
     this.dbDir = dbDir
     this.schemaDir = schemaDir
 

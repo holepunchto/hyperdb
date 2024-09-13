@@ -34,6 +34,8 @@ function collection0_reconstruct (version, keyBuf, valueBuf) {
 // '@db/members'
 const collection0 = {
   name: '@db/members',
+  id: 0,
+  stats: false,
   encodeKey: function encodeKey (record) {
     const key = [record.id]
     return collection0_key.encode(key)
@@ -75,8 +77,9 @@ function index0_indexify (record) {
 
 // '@db/members-by-age'
 const index0 = {
-  _collectionName: '@db/members',
   name: '@db/members-by-age',
+  id: 1,
+  stats: false,
   encodeKeys: function encodeKeys (record) {
     const key = [record.age, record.id]
     return [index0_key.encode(key)]
@@ -92,7 +95,7 @@ const index0 = {
   encodeValue: (doc) => index0.collection.encodeKey(doc),
   reconstruct: (keyBuf, valueBuf) => valueBuf,
   offset: 0,
-  collection: null
+  collection: collection0
 }
 
 const IndexMap = new Map([
@@ -104,9 +107,8 @@ const CollectionMap = new Map([
 const Collections = [...CollectionMap.values()]
 const Indexes = [...IndexMap.values()]
 for (const index of IndexMap.values()) {
-  const collection = CollectionMap.get(index._collectionName)
+  const collection = index.collection
   collection.indexes.push(index)
-  index.collection = collection
   index.offset = collection.indexes.length - 1
 }
 

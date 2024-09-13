@@ -160,7 +160,6 @@ const Indexes = [...IndexMap.values()]
 for (const index of IndexMap.values()) {
   const collection = index.collection
   collection.indexes.push(index)
-  index.collection = collection
   index.offset = collection.indexes.length - 1
 }
 

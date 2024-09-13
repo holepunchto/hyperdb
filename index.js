@@ -7,12 +7,12 @@ const RocksEngine = require('./lib/engine/rocks')
 const STATS = 'stats'
 
 class Updates {
-  constructor (clock, entries) {
+  constructor (clock, entries, stats) {
     this.refs = 1
     this.mutating = 0
     this.clock = clock
     this.map = new Map(entries)
-    this.collectionsStats = new Set()
+    this.stats = new Map(stats)
   }
 
   get size () {
@@ -31,13 +31,24 @@ class Updates {
   detach () {
     const entries = new Array(this.map.size)
 
-    let i = 0
-    for (const [key, u] of this.map) {
-      entries[i++] = [key, { key: u.key, value: u.value, indexes: u.indexes.slice(0) }]
+    if (entries.length > 0) {
+      let i = 0
+      for (const [key, u] of this.map) {
+        entries[i++] = [key, { key: u.key, value: u.value, indexes: u.indexes.slice(0) }]
+      }
+    }
+
+    const stats = new Array(this.stats.size)
+
+    if (stats.length > 0) {
+      let i = 0
+      for (const [col, st] of this.stats) {
+        stats[i++] = [col, st]
+      }
     }
 
     this.refs--
-    return new Updates(this.clock, entries)
+    return new Updates(this.clock, entries, stats)
   }
 
   get (key) {
@@ -47,13 +58,26 @@ class Updates {
 
   flush (clock) {
     this.clock = clock
-    this.collectionsStats.clear()
+    this.stats.clear()
     this.map.clear()
+  }
+
+  prestats (collectionOrIndex, engine) {
+    const st = this.stats.get(collectionOrIndex)
+    if (st) return st
+
+    const state = {
+      key: null,
+      value: null,
+      promise: null
+    }
+
+    this.stats.set(collectionOrIndex, state)
+    return state
   }
 
   update (collection, key, value) {
     const u = { created: false, collection, key, value, indexes: [] }
-    if (collection.stats) this.collectionsStats.add(collection)
     this.map.set(b4a.toString(key, 'hex'), u)
     return u
   }
@@ -119,7 +143,7 @@ class HyperDB {
   constructor (engine, definition, {
     version = definition.version,
     snapshot = engine.snapshot(),
-    updates = new Updates(engine.clock, []),
+    updates = new Updates(engine.clock, [], []),
     rootInstance = null,
     writable = true
   } = {}) {
@@ -300,6 +324,10 @@ class HyperDB {
     return st
   }
 
+  _encodeStatsKey (target) {
+    return this.definition.resolveCollection(STATS).encodeKey({ id: target.id })
+  }
+
   async delete (collectionName, doc) {
     maybeClosed(this)
 
@@ -313,7 +341,14 @@ class HyperDB {
     let prevValue = null
     this.updates.mutating++
     try {
+      const st = collection.stats === true ? this.updates.prestats(collection) : null
+      if (st !== null && !st.promise) {
+        st.key = this._encodeStatsKey(collection)
+        st.promise = this.engine.get(this.engineSnapshot, st.key)
+        st.promise.catch(noop) // handled below
+      }
       prevValue = await this.engine.get(this.engineSnapshot, key)
+      if (st !== null) st.value = await st.promise
     } finally {
       this.updates.mutating--
     }
@@ -352,7 +387,14 @@ class HyperDB {
     let prevValue = null
     this.updates.mutating++
     try {
+      const st = collection.stats === true ? this.updates.prestats(collection) : null
+      if (st !== null && !st.promise) {
+        st.key = this._encodeStatsKey(collection)
+        st.promise = this.engine.get(this.engineSnapshot, st.key)
+        st.promise.catch(noop) // handled below
+      }
       prevValue = await this.engine.get(this.engineSnapshot, key)
+      if (st !== null) st.value = await st.promise
     } finally {
       this.updates.mutating--
     }
@@ -397,14 +439,13 @@ class HyperDB {
     }
   }
 
-  async _applyStats () {
+  _applyStats () {
     const statsCollection = this.definition.resolveCollection(STATS)
-    for (const collection of this.updates.collectionsStats) {
-      if (collection === statsCollection) continue
-      const stats = (await this.engine.get(STATS, { id: collection.id })) || { count: 0 }
+    for (const [collection, { key, value }] of this.updates.stats) {
+      const stats = value === null ? { count: 0 } : statsCollection.reconstruct(key, value)
       const overlay = this.updates.collectionStatsOverlay(collection)
       stats.count += overlay.count
-      this.updates.update(statsCollection, statsCollection.encodeKey({ id: collection.id }), statsCollection.encodeValue(this.version, stats))
+      this.updates.update(statsCollection, key, statsCollection.encodeValue(this.version, stats))
     }
   }
 
@@ -417,7 +458,7 @@ class HyperDB {
     if (this.updates.clock !== this.engine.clock) throw new Error('Database has changed, refusing to commit')
     if (this.updates.refs > 1) this.updates = this.updates.detach()
 
-    if (this.updates.collectionsStats.size) await this._applyStats()
+    if (this.updates.stats.size) this._applyStats()
 
     await this.engine.commit(this.updates)
 
@@ -488,5 +529,7 @@ function diffKeys (a, b) {
 
   return res
 }
+
+function noop () {}
 
 module.exports = HyperDB

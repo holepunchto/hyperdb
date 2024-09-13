@@ -61,13 +61,13 @@ module.exports = function generateCode (hyperdb) {
   for (let i = 0; i < hyperdb.orderedTypes.length; i++) {
     const type = hyperdb.orderedTypes[i]
     if (type.isCollection) {
-      const id = `collection${collections.length}`
+      const id = `collection${type.id}`
       collections.push({ id, type })
       str += generateCollectionDefinition(id, type)
     } else if (type.isIndex) {
       const id = `index${indexes.length}`
       indexes.push({ id, type })
-      str += generateIndexDefinition(id, type)
+      str += generateIndexDefinition(id, type, `collection${type.collection.id}`)
     }
     str += '\n'
   }
@@ -92,7 +92,7 @@ module.exports = function generateCode (hyperdb) {
   str += 'const Indexes = [...IndexMap.values()]\n'
 
   str += 'for (const index of IndexMap.values()) {\n'
-  str += '  const collection = CollectionMap.get(index._collectionName)\n'
+  str += '  const collection = index.collection\n'
   str += '  collection.indexes.push(index)\n'
   str += '  index.collection = collection\n'
   str += '  index.offset = collection.indexes.length - 1\n'
@@ -153,7 +153,7 @@ function generateCollectionDefinition (id, collection) {
   str += `// ${s(collection.fqn)} reconstruction function\n`
   str += `function ${id}_reconstruct (version, keyBuf, valueBuf) {\n`
   str += '  // TODO: This should be fully code generated\n'
-  str += '  const key = collection0_key.decode(keyBuf)\n'
+  str += `  const key = ${id}_key.decode(keyBuf)\n`
   str += `  const value = c.decode(resolveStruct(${s(collection.valueEncoding)}, version), valueBuf)\n`
   str += '  return {\n'
   for (let i = 0; i < collection.key.length; i++) {
@@ -168,6 +168,8 @@ function generateCollectionDefinition (id, collection) {
   str += `// ${s(collection.fqn)}\n`
   str += `const ${id} = {\n`
   str += `  name: ${s(collection.fqn)},\n`
+  str += `  id: ${collection.id},\n`
+  str += `  stats: ${collection.stats},\n`
   str += `  encodeKey: ${generateEncodeCollectionKey(id, collection)},\n`
   str += `  encodeKeyRange: ${generateEncodeKeyRange(id, collection)},\n`
   str += `  encodeValue: ${generateEncodeCollectionValue(collection)},\n`
@@ -177,18 +179,19 @@ function generateCollectionDefinition (id, collection) {
   return str
 }
 
-function generateIndexDefinition (id, index) {
+function generateIndexDefinition (id, index, collectionId) {
   let str = generateCommonPrefix(id, index)
   str += `// ${s(index.fqn)}\n`
   str += `const ${id} = {\n`
-  str += `  _collectionName: ${s(index.description.collection)},\n`
   str += `  name: ${s(index.fqn)},\n`
+  str += `  id: ${index.id},\n`
+  str += `  stats: ${index.stats},\n`
   str += `  encodeKeys: ${generateEncodeIndexKeys(id, index)},\n`
   str += `  encodeKeyRange: ${generateEncodeKeyRange(id, index)},\n`
   str += `  encodeValue: (doc) => ${id}.collection.encodeKey(doc),\n`
   str += '  reconstruct: (keyBuf, valueBuf) => valueBuf,\n'
   str += '  offset: 0,\n'
-  str += '  collection: null\n'
+  str += `  collection: ${collectionId}\n`
   str += '}\n'
   return str
 }

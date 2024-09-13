@@ -4,12 +4,15 @@ const b4a = require('b4a')
 // engines
 const RocksEngine = require('./lib/engine/rocks')
 
+const STATS = 'stats'
+
 class Updates {
   constructor (clock, entries) {
     this.refs = 1
     this.mutating = 0
     this.clock = clock
     this.map = new Map(entries)
+    this.collectionsStats = new Set()
   }
 
   get size () {
@@ -44,11 +47,13 @@ class Updates {
 
   flush (clock) {
     this.clock = clock
+    this.collectionsStats.clear()
     this.map.clear()
   }
 
-  update (key, value) {
-    const u = { key, value, indexes: [] }
+  update (collection, key, value) {
+    const u = { created: false, collection, key, value, indexes: [] }
+    if (collection.stats) this.collectionsStats.add(collection)
     this.map.set(b4a.toString(key, 'hex'), u)
     return u
   }
@@ -59,6 +64,22 @@ class Updates {
 
   entries () {
     return this.map.values()
+  }
+
+  indexStatsOverlay (index) {
+    throw new Error('Index stats are not currently implemented, open an issue')
+  }
+
+  collectionStatsOverlay (collection) {
+    const info = { count: 0 }
+
+    for (const u of this.map.values()) {
+      if (u.collection !== collection) continue
+      if (u.value === null) info.count--
+      else if (u.created) info.count++
+    }
+
+    return info
   }
 
   overlay (range, index, reverse) {
@@ -254,10 +275,29 @@ class HyperDB {
     if (collection === null) return null
 
     const key = collection.encodeKey(doc)
+
     const u = this.updates.get(key)
     const value = u !== null ? u.value : await this.engine.get(this.engineSnapshot, key)
 
     return value === null ? null : collection.reconstruct(this.version, key, value)
+  }
+
+  async stats (indexName) {
+    const collection = this.definition.resolveCollection(indexName)
+    const index = collection === null ? this.definition.resolveIndex(indexName) : null
+
+    if (collection === null && index === null) throw new Error('Unknown index: ' + indexName)
+    if (index) throw new Error('Only support')
+
+    const target = collection || index
+    const st = await this.get(STATS, { id: target.id })
+
+    const overlay = index ? this.updates.indexStatsOverlay(index) : this.updates.collectionStatsOverlay(collection)
+
+    if (!st) return overlay
+
+    st.count += overlay.count
+    return st
   }
 
   async delete (collectionName, doc) {
@@ -285,7 +325,7 @@ class HyperDB {
 
     const prevDoc = collection.reconstruct(this.version, key, prevValue)
 
-    const u = this.updates.update(key, null)
+    const u = this.updates.update(collection, key, null)
 
     for (let i = 0; i < collection.indexes.length; i++) {
       const idx = collection.indexes[i]
@@ -321,7 +361,9 @@ class HyperDB {
 
     const prevDoc = prevValue === null ? null : collection.reconstruct(this.version, key, prevValue)
 
-    const u = this.updates.update(key, value)
+    const u = this.updates.update(collection, key, value)
+
+    u.created = prevValue === null
 
     for (let i = 0; i < collection.indexes.length; i++) {
       const idx = collection.indexes[i]
@@ -355,6 +397,17 @@ class HyperDB {
     }
   }
 
+  async _applyStats () {
+    const statsCollection = this.definition.resolveCollection(STATS)
+    for (const collection of this.updates.collectionsStats) {
+      if (collection === statsCollection) continue
+      const stats = (await this.engine.get(STATS, { id: collection.id })) || { count: 0 }
+      const overlay = this.updates.collectionStatsOverlay(collection)
+      stats.count += overlay.count
+      this.updates.update(statsCollection, statsCollection.encodeKey({ id: collection.id }), statsCollection.encodeValue(this.version, stats))
+    }
+  }
+
   async flush () {
     maybeClosed(this)
 
@@ -363,6 +416,8 @@ class HyperDB {
     if (this.updates.size === 0) return
     if (this.updates.clock !== this.engine.clock) throw new Error('Database has changed, refusing to commit')
     if (this.updates.refs > 1) this.updates = this.updates.detach()
+
+    if (this.updates.collectionsStats.size) await this._applyStats()
 
     await this.engine.commit(this.updates)
 

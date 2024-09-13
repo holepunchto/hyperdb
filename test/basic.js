@@ -244,3 +244,39 @@ test('watch', async function (t) {
 
   await db.close()
 })
+
+test('stats', async function (t) {
+  const db = await rocks(t, { fixture: 2 })
+
+  await db.insert('@db/members', { id: 'maf', age: 34 })
+  await db.insert('@db/members', { id: 'andrew', age: 34 })
+  await db.insert('@db/members', { id: 'anna', age: 32 })
+
+  {
+    const st = await db.stats('@db/members')
+    t.is(st.count, 3)
+  }
+
+  await db.flush()
+
+  {
+    const st = await db.stats('@db/members')
+    t.is(st.count, 3)
+  }
+
+  await db.delete('@db/members', { id: 'anna', age: 32 })
+
+  {
+    const st = await db.stats('@db/members')
+    t.is(st.count, 2)
+  }
+
+  await db.insert('@db/members', { id: 'maf', age: 35 })
+
+  {
+    const st = await db.stats('@db/members')
+    t.is(st.count, 2)
+  }
+
+  await db.close()
+})

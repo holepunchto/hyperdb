@@ -19,6 +19,7 @@ class DBType {
     this.fqn = getFQN(this.namespace, this.description.name)
     this.key = description.key
     this.fullKey = []
+    this.stats = !!description.stats
 
     this.isIndex = false
     this.isCollection = false
@@ -55,7 +56,8 @@ class DBType {
       name: this.description.name,
       unsafe: this.description.unsafe,
       namespace: this.namespace,
-      id: this.id
+      id: this.id,
+      stats: this.stats
     }
   }
 }
@@ -200,6 +202,7 @@ class Builder {
     this.typesById = new Map()
     this.orderedTypes = []
 
+    this.registeredStats = false
     this.currentOffset = this.offset
 
     this.initializing = true
@@ -227,12 +230,38 @@ class Builder {
     return { id: this.currentOffset++, prefix: null }
   }
 
+  _registerStats () {
+    if (this.registeredStats) return
+    this.registeredStats = true
+
+    this.schema.register({
+      namespace: null,
+      name: 'stats',
+      fields: [{
+        name: 'id',
+        type: 'uint',
+        required: true
+      }, {
+        name: 'count',
+        type: 'uint',
+        required: true
+      }]
+    })
+    this.registerCollection({
+      name: 'stats',
+      schema: 'stats', // TODO: update hyperschema to support the null ns
+      key: ['id']
+    }, null)
+  }
+
   registerCollection (description, namespace) {
     const collection = new Collection(this, namespace, description)
     if (this.typesByName.has(collection.fqn)) return
 
     this.orderedTypes.push(collection)
     this.typesByName.set(collection.fqn, collection)
+
+    if (collection.stats) this._registerStats()
   }
 
   registerIndex (description, namespace) {
@@ -293,5 +322,6 @@ class Builder {
 module.exports = Builder
 
 function getFQN (namespace, name) {
+  if (namespace === null) return name
   return '@' + namespace + '/' + name
 }

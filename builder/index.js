@@ -249,7 +249,7 @@ class Builder {
     })
     this.registerCollection({
       name: 'stats',
-      schema: 'stats', // TODO: update hyperschema to support the null ns
+      schema: 'stats',
       key: ['id']
     }, null)
   }

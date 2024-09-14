@@ -237,6 +237,7 @@ class Builder {
     this.schema.register({
       namespace: null,
       name: 'stats',
+      derived: true,
       fields: [{
         name: 'id',
         type: 'uint',

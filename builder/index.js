@@ -75,6 +75,7 @@ class Collection extends DBType {
 
     this.key = description.key || []
     this.fullKey = this.key
+    this.trigger = (typeof description.trigger === 'function') ? description.trigger.toString() : description.trigger
 
     this.keyEncoding = []
     this.valueEncoding = this.fqn + '/value'

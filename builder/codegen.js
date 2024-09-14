@@ -122,10 +122,12 @@ module.exports = function generateCode (hyperdb) {
   return str
 }
 
-function toArrayFunction (fn) {
+function toArrowFunction (str, async) {
+  let fn = genFunc()(str).toString()
   const i = fn.indexOf('(')
   const isArrow = !fn.slice(0, i).includes('function')
   fn = fn.slice(i)
+  if (async) fn = 'async ' + fn
   if (isArrow) return fn
   return fn.replace('{', '=> {')
 }
@@ -138,9 +140,8 @@ function generateCommonPrefix (id, type) {
   str += '\n'
 
   if (type.isMapped) {
-    const fn = genFunc()
-    fn(type.map)
-    str += `const ${id}_map = ${toArrayFunction(fn.toString())}\n`
+    str += `// ${s(type.fqn)} has the following schema defined key map\n`
+    str += `const ${id}_map = ${toArrowFunction(type.map, false)}\n`
     str += '\n'
   }
 
@@ -165,6 +166,12 @@ function generateCommonPrefix (id, type) {
 function generateCollectionDefinition (id, collection) {
   let str = generateCommonPrefix(id, collection)
 
+  if (collection.trigger) {
+    str += `// ${s(collection.fqn)} has the following schema defined trigger\n`
+    str += `const ${id}_trigger = ${toArrowFunction(collection.trigger, true)}\n`
+    str += '\n'
+  }
+
   str += `// ${s(collection.fqn)} reconstruction function\n`
   str += `function ${id}_reconstruct (version, keyBuf, valueBuf) {\n`
   str += '  // TODO: This should be fully code generated\n'
@@ -185,6 +192,7 @@ function generateCollectionDefinition (id, collection) {
   str += `  name: ${s(collection.fqn)},\n`
   str += `  id: ${collection.id},\n`
   str += `  stats: ${collection.stats},\n`
+  str += `  trigger: ${collection.trigger ? id + '_trigger' : 'null'},\n`
   str += `  encodeKey: ${generateEncodeCollectionKey(id, collection)},\n`
   str += `  encodeKeyRange: ${generateEncodeKeyRange(id, collection)},\n`
   str += `  encodeValue: ${generateEncodeCollectionValue(collection)},\n`

@@ -22,6 +22,9 @@ const struct = {
 
 const membersCollection = {
   name: 'members',
+  stats: false,
+  id: 0,
+  trigger: null,
   encodeKey (doc) {
     return memberKey.encode([doc.id])
   },
@@ -40,6 +43,8 @@ const membersCollection = {
 const membersByAgeIndex = {
   name: 'members/by-age',
   offset: 0,
+  stats: false,
+  id: 1,
   encodeKeys (doc) {
     return [memberByAge.encode([doc.age, doc.id])]
   },

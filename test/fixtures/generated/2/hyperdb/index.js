@@ -36,6 +36,7 @@ const collection0 = {
   name: '@db/members',
   id: 0,
   stats: true,
+  trigger: null,
   encodeKey: function encodeKey (record) {
     const key = [record.id]
     return collection0_key.encode(key)
@@ -86,6 +87,7 @@ const collection1 = {
   name: 'stats',
   id: 1,
   stats: false,
+  trigger: null,
   encodeKey: function encodeKey (record) {
     const key = [record.id]
     return collection1_key.encode(key)
@@ -130,9 +132,8 @@ const index0 = {
   name: '@db/members-by-age',
   id: 2,
   stats: false,
-  encodeKeys: function encodeKeys (record) {
-    const key = [record.age, record.id]
-    return [index0_key.encode(key)]
+  encodeKeys: function encodeKeys (record, context) {
+    return [index0_key.encode([record.age, record.id])]
   },
   encodeKeyRange: function encodeKeyRange ({ gt, lt, gte, lte } = {}) {
     return index0_key.encodeRange({

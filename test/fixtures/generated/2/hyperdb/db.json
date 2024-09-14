@@ -12,6 +12,7 @@
         "@db/members-by-age"
       ],
       "schema": "@db/member",
+      "derived": false,
       "key": [
         "id"
       ]
@@ -24,6 +25,7 @@
       "type": 1,
       "indexes": [],
       "schema": "stats",
+      "derived": false,
       "key": [
         "id"
       ]

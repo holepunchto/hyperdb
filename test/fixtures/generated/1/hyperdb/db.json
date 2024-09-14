@@ -12,6 +12,7 @@
         "@db/members-by-age"
       ],
       "schema": "@db/member",
+      "derived": false,
       "key": [
         "id"
       ]

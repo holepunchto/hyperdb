@@ -301,7 +301,7 @@ class HyperDB {
     const collection = this.definition.resolveCollection(collectionName)
     if (collection === null) return null
 
-    const key = collection.encodeKey(doc)
+    const key = b4a.isBuffer(doc) ? doc : collection.encodeKey(doc)
 
     const u = this.updates.get(key)
     const value = u !== null ? u.value : await this.engine.get(this.engineSnapshot, key)
@@ -348,6 +348,11 @@ class HyperDB {
     return value
   }
 
+  // TODO: needs to wait for pending inserts/deletes and then lock all future ones whilst it runs
+  _runTrigger (collection, key, doc) {
+    return collection.trigger(this, key, doc, this.context)
+  }
+
   async delete (collectionName, doc) {
     maybeClosed(this)
 
@@ -361,6 +366,7 @@ class HyperDB {
     let prevValue = null
     this.updates.mutating++
     try {
+      if (collection.trigger !== null) await this._runTrigger(collection, key, doc)
       prevValue = await this._getPrev(key, collection)
     } finally {
       this.updates.mutating--
@@ -400,6 +406,7 @@ class HyperDB {
     let prevValue = null
     this.updates.mutating++
     try {
+      if (collection.trigger !== null) await this._runTrigger(collection, key, doc)
       prevValue = await this._getPrev(key, collection)
     } finally {
       this.updates.mutating--

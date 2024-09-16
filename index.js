@@ -241,7 +241,7 @@ class HyperDB {
   }
 
   transaction () {
-    if (this.rootInstance !== null) {
+    if (this.rootInstance !== this) {
       throw new Error('Can only make transactions on main instance')
     }
 

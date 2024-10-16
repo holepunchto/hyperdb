@@ -31,11 +31,11 @@ const collection0 = {
   name: '@db/members',
   id: 0,
   stats: false,
-  encodeKey: function encodeKey (record) {
+  encodeKey (record) {
     const key = [record.id]
     return collection0_key.encode(key)
   },
-  encodeKeyRange: function encodeKeyRange ({ gt, lt, gte, lte } = {}) {
+  encodeKeyRange ({ gt, lt, gte, lte } = {}) {
     return collection0_key.encodeRange({
       gt: gt ? collection0_indexify(gt) : null,
       lt: lt ? collection0_indexify(lt) : null,
@@ -43,7 +43,7 @@ const collection0 = {
       lte: lte ? collection0_indexify(lte) : null
     })
   },
-  encodeValue: function encodeValue (version, record) {
+  encodeValue (version, record) {
     return c.encode(resolveStruct('@db/members/value', version), record)
   },
   trigger: null,
@@ -76,10 +76,10 @@ const index1 = {
   name: '@db/members-by-age',
   id: 1,
   stats: false,
-  encodeKey: function encodeKey (record) {
+  encodeKey (record) {
     return index1_key.encode(index1_indexify(record))
   },
-  encodeKeyRange: function encodeKeyRange ({ gt, lt, gte, lte } = {}) {
+  encodeKeyRange ({ gt, lt, gte, lte } = {}) {
     return index1_key.encodeRange({
       gt: gt ? index1_indexify(gt) : null,
       lt: lt ? index1_indexify(lt) : null,
@@ -88,7 +88,7 @@ const index1 = {
     })
   },
   encodeValue: (doc) => index1.collection.encodeKey(doc),
-  encodeIndexKeys: function encodeKeys (record, context) {
+  encodeIndexKeys (record, context) {
     return [index1_key.encode([record.age, record.id])]
   },
   reconstruct: (keyBuf, valueBuf) => valueBuf,

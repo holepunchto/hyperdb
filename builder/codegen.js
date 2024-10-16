@@ -44,7 +44,8 @@ const IndexTypeMap = new Map([
   ['base64', 'IndexEncoder.STRING'],
   ['fixed32', 'IndexEncoder.BUFFER'],
   ['fixed64', 'IndexEncoder.BUFFER'],
-  ['buffer', 'IndexEncoder.BUFFER']
+  ['buffer', 'IndexEncoder.BUFFER'],
+  ['none', 'IndexEncoder.NONE']
 ])
 
 const Falsies = new Map([
@@ -63,6 +64,10 @@ const Falsies = new Map([
   ['hex', '\'\''],
   ['base64', '\'\'']
 ])
+
+function isUndefinedNull (type) {
+  return type === 'none'
+}
 
 module.exports = function generateCode (hyperdb) {
   let str = ''
@@ -162,9 +167,13 @@ function generateCommonPrefix (type) {
 
     for (let i = 0; i < len; i++) {
       const key = type.fullKey[i]
-      str += `  const a${i} = ${getKeyPath(key, 'record')}\n`
-      str += `  if (a${i} === undefined) return arr\n`
-      str += `  arr.push(a${i})\n`
+      if (!isUndefinedNull(type.keyEncoding[i])) {
+        str += `  const a${i} = ${getKeyPath(key, 'record')}\n`
+        str += `  if (a${i} === undefined) return arr\n`
+        str += `  arr.push(a${i})\n`
+      } else {
+        str += '  arr.push(null)\n'
+      }
       str += '\n'
     }
     str += '  return arr\n'

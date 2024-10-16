@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "schema": [
+    {
+      "name": "member",
+      "namespace": "db",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "key",
+          "required": true,
+          "type": "none",
+          "version": 1
+        },
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "age",
+          "required": true,
+          "type": "uint",
+          "version": 1
+        }
+      ]
+    }
+  ]
+}

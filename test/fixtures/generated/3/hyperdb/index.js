@@ -7,12 +7,20 @@ const { version, resolveStruct } = require('./messages.js')
 
 // '@db/members' collection key
 const collection0_key = new IndexEncoder([
+  IndexEncoder.NONE,
   IndexEncoder.STRING
 ], { prefix: 0 })
 
 function collection0_indexify (record) {
-  const a = record.id
-  return a === undefined ? [] : [a]
+  const arr = []
+
+  arr.push(null)
+
+  const a1 = record.id
+  if (a1 === undefined) return arr
+  arr.push(a1)
+
+  return arr
 }
 
 // '@db/members' reconstruction function
@@ -21,7 +29,8 @@ function collection0_reconstruct (version, keyBuf, valueBuf) {
   const value = c.decode(resolveStruct('@db/members/value', version), valueBuf)
   // TODO: This should be fully code generated
   return {
-    id: key[0],
+    key: key[0],
+    id: key[1],
     ...value
   }
 }
@@ -32,7 +41,7 @@ const collection0 = {
   id: 0,
   stats: true,
   encodeKey (record) {
-    const key = [record.id]
+    const key = [record.key, record.id]
     return collection0_key.encode(key)
   },
   encodeKeyRange ({ gt, lt, gte, lte } = {}) {
@@ -99,20 +108,26 @@ const collection1 = {
 
 // '@db/members-by-age' collection key
 const index2_key = new IndexEncoder([
+  IndexEncoder.NONE,
   IndexEncoder.UINT,
+  IndexEncoder.NONE,
   IndexEncoder.STRING
 ], { prefix: 2 })
 
 function index2_indexify (record) {
   const arr = []
 
-  const a0 = record.age
-  if (a0 === undefined) return arr
-  arr.push(a0)
+  arr.push(null)
 
-  const a1 = record.id
+  const a1 = record.age
   if (a1 === undefined) return arr
   arr.push(a1)
+
+  arr.push(null)
+
+  const a3 = record.id
+  if (a3 === undefined) return arr
+  arr.push(a3)
 
   return arr
 }
@@ -135,7 +150,7 @@ const index2 = {
   },
   encodeValue: (doc) => index2.collection.encodeKey(doc),
   encodeIndexKeys (record, context) {
-    return [index2_key.encode([record.age, record.id])]
+    return [index2_key.encode([record.key, record.age, record.key, record.id])]
   },
   reconstruct: (keyBuf, valueBuf) => valueBuf,
   offset: collection0.indexes.length,

@@ -15,7 +15,8 @@
       "derived": false,
       "key": [
         "id"
-      ]
+      ],
+      "trigger": null
     },
     {
       "name": "stats",
@@ -28,7 +29,8 @@
       "derived": false,
       "key": [
         "id"
-      ]
+      ],
+      "trigger": null
     },
     {
       "name": "members-by-age",

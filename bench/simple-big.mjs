@@ -1,5 +1,5 @@
 import HyperDB from '../index.js'
-import def from '../test/fixtures/generated/1/hyperdb/index.js'
+import def from '../test/fixtures/schema/1/hyperdb/index.js'
 
 const db = HyperDB.rocks('./test.db', def)
 

@@ -56,7 +56,7 @@ function createTester (type) {
 function creator (t, createHyperDB) {
   return async function fromDefinition (def, opts) {
     if (!HyperDB.isDefinition(def)) {
-      return fromDefinition(require(`../fixtures/generated/${(def && def.fixture) || 1}/hyperdb`), def)
+      return fromDefinition(require(`../fixtures/schema/${(def && def.fixture) || 1}/hyperdb`), def)
     }
 
     const db = createHyperDB(await tmp(t), def, opts)

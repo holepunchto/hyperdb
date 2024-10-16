@@ -1,8 +1,8 @@
 const Hyperschema = require('hyperschema')
 const HyperDB = require('.')
 
-const SCHEMA_DIR = './spec/hyperschema'
-const DB_DIR = './spec/hyperdb'
+const SCHEMA_DIR = './schema/hyperschema'
+const DB_DIR = './schema/hyperdb'
 
 const schema = Hyperschema.from(SCHEMA_DIR)
 const example = schema.namespace('example')

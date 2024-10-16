@@ -288,7 +288,6 @@ test.solo('none-type indexes', async function ({ create }, t) {
 
   {
     const result = await db.find('@db/members-by-age', { gte: { key: null, age: 33 }, lt: { key: null, age: 99 } }).toArray()
-    console.log('RESULT 1:', result)
     t.alike(result, [
       { key: null, id: 'andrew', age: 34 },
       { key: null, id: 'maf', age: 37 }
@@ -297,7 +296,6 @@ test.solo('none-type indexes', async function ({ create }, t) {
 
   {
     const result = await db.find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }).toArray()
-    console.log('RESULT 2:', result)
     t.alike(result, [
       { key: null, id: 'andrew', age: 34 },
       { key: null, id: 'maf', age: 37 }

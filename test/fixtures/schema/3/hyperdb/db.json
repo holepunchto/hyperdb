@@ -1,0 +1,50 @@
+{
+  "version": 0,
+  "offset": 0,
+  "schema": [
+    {
+      "name": "members",
+      "namespace": "db",
+      "id": 0,
+      "stats": true,
+      "type": 1,
+      "indexes": [
+        "@db/members-by-age"
+      ],
+      "schema": "@db/member",
+      "derived": false,
+      "key": [
+        "key",
+        "id"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "stats",
+      "namespace": null,
+      "id": 1,
+      "stats": false,
+      "type": 1,
+      "indexes": [],
+      "schema": "stats",
+      "derived": false,
+      "key": [
+        "id"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "members-by-age",
+      "namespace": "db",
+      "id": 2,
+      "stats": false,
+      "type": 2,
+      "collection": "@db/members",
+      "unique": false,
+      "key": [
+        "key",
+        "age"
+      ]
+    }
+  ]
+}

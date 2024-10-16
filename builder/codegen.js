@@ -167,12 +167,12 @@ function generateCommonPrefix (type) {
 
     for (let i = 0; i < len; i++) {
       const key = type.fullKey[i]
-      if (!isUndefinedNull(type.keyEncoding[i])) {
+      if (isUndefinedNull(type.keyEncoding[i])) {
+        str += '  arr.push(null)\n'
+      } else {
         str += `  const a${i} = ${getKeyPath(key, 'record')}\n`
         str += `  if (a${i} === undefined) return arr\n`
         str += `  arr.push(a${i})\n`
-      } else {
-        str += '  arr.push(null)\n'
       }
       str += '\n'
     }

@@ -280,7 +280,7 @@ test('stats', async function ({ create }, t) {
   await db.close()
 })
 
-test.solo('none-type indexes', async function ({ create }, t) {
+test('none-type indexes', async function ({ create }, t) {
   const db = await create({ fixture: 3 })
   await db.insert('@db/members', { id: 'maf', age: 37 })
   await db.insert('@db/members', { id: 'andrew', age: 34 })

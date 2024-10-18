@@ -33,9 +33,7 @@ const collection0 = {
   stats: false,
   encodeKey (record = {}) {
     const key = [record.key]
-    const encoded = collection0_key.encode(key)
-    console.log('ENCODED HERE IS:', encoded)
-    return encoded
+    return collection0_key.encode(key)
   },
   encodeKeyRange ({ gt, lt, gte, lte } = {}) {
     return collection0_key.encodeRange({

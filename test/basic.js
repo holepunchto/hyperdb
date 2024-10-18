@@ -261,4 +261,3 @@ test('basic reopen', async function ({ create }, t) {
     await db.close()
   }
 })
-

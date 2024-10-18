@@ -1,5 +1,6 @@
 const definition = require('./fixtures/definition')
 const { test } = require('./helpers')
+const tmp = require('test-tmp')
 
 test('basic full example', async function ({ create }, t) {
   const db = await create(definition)
@@ -243,3 +244,21 @@ test('watch', async function ({ create }, t) {
 
   await db.close()
 })
+
+test('basic reopen', async function ({ create }, t) {
+  const storage = await tmp(t)
+  {
+    const db = await create(definition, { storage })
+    await db.insert('members', { id: 'maf', age: 34 })
+    await db.flush()
+    await db.close()
+  }
+
+  {
+    const db = await create(definition, { storage })
+    const all = await db.find('members').toArray()
+    t.is(all.length, 1)
+    await db.close()
+  }
+})
+

@@ -285,6 +285,7 @@ test('none-type indexes', async function ({ create }, t) {
   await db.insert('@db/members', { id: 'maf', age: 37 })
   await db.insert('@db/members', { id: 'andrew', age: 34 })
   await db.insert('@db/members', { id: 'anna', age: 32 })
+  await db.flush()
 
   {
     const result = await db.find('@db/members-by-age', { gte: { key: null, age: 33 }, lt: { key: null, age: 99 } }).toArray()
@@ -301,6 +302,19 @@ test('none-type indexes', async function ({ create }, t) {
       { key: null, id: 'maf', age: 37 }
     ])
   }
+
+  await db.close()
+})
+
+test.solo('can do a get on a collection with a none-type key', async function ({ create }, t) {
+  const db = await create({ fixture: 3 })
+
+  await db.insert('@db/digest', { id: 'maf', age: 37 })
+  await db.flush()
+
+  const record = await db.get('@db/digest')
+  t.ok(record)
+  t.is(record.name, 'maf')
 
   await db.close()
 })

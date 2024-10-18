@@ -282,7 +282,7 @@ function generateEncodeCollectionKey (collection, sep) {
 
   const accessors = toProps('record', collection.fullKey)
   let str = ''
-  str += '  encodeKey (record) {\n'
+  str += '  encodeKey (record = {}) {\n'
   str += `    const key = [${accessors.join(', ')}]\n`
   str += `    return ${id + '_key'}.encode(key)\n`
   str += `  }${sep}\n`

@@ -31,7 +31,7 @@ const collection0 = {
   name: '@db/members',
   id: 0,
   stats: false,
-  encodeKey (record) {
+  encodeKey (record = {}) {
     const key = [record.id]
     return collection0_key.encode(key)
   },

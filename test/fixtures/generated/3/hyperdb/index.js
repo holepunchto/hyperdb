@@ -5,13 +5,61 @@ const { IndexEncoder, c } = require('@holepunchto/hyperdb/runtime')
 
 const { version, resolveStruct } = require('./messages.js')
 
-// '@db/members' collection key
+// '@db/digest' collection key
 const collection0_key = new IndexEncoder([
-  IndexEncoder.NONE,
-  IndexEncoder.STRING
+  IndexEncoder.NONE
 ], { prefix: 0 })
 
 function collection0_indexify (record) {
+  const a = record.key
+  return a === undefined ? [] : [a]
+}
+
+// '@db/digest' reconstruction function
+function collection0_reconstruct (version, keyBuf, valueBuf) {
+  const key = collection0_key.decode(keyBuf)
+  const value = c.decode(resolveStruct('@db/digest/value', version), valueBuf)
+  // TODO: This should be fully code generated
+  return {
+    key: key[0],
+    ...value
+  }
+}
+
+// '@db/digest'
+const collection0 = {
+  name: '@db/digest',
+  id: 0,
+  stats: false,
+  encodeKey (record = {}) {
+    const key = [record.key]
+    const encoded = collection0_key.encode(key)
+    console.log('ENCODED HERE IS:', encoded)
+    return encoded
+  },
+  encodeKeyRange ({ gt, lt, gte, lte } = {}) {
+    return collection0_key.encodeRange({
+      gt: gt ? collection0_indexify(gt) : null,
+      lt: lt ? collection0_indexify(lt) : null,
+      gte: gte ? collection0_indexify(gte) : null,
+      lte: lte ? collection0_indexify(lte) : null
+    })
+  },
+  encodeValue (version, record) {
+    return c.encode(resolveStruct('@db/digest/value', version), record)
+  },
+  trigger: null,
+  reconstruct: collection0_reconstruct,
+  indexes: []
+}
+
+// '@db/members' collection key
+const collection1_key = new IndexEncoder([
+  IndexEncoder.NONE,
+  IndexEncoder.STRING
+], { prefix: 1 })
+
+function collection1_indexify (record) {
   const arr = []
 
   arr.push(null)
@@ -24,8 +72,8 @@ function collection0_indexify (record) {
 }
 
 // '@db/members' reconstruction function
-function collection0_reconstruct (version, keyBuf, valueBuf) {
-  const key = collection0_key.decode(keyBuf)
+function collection1_reconstruct (version, keyBuf, valueBuf) {
+  const key = collection1_key.decode(keyBuf)
   const value = c.decode(resolveStruct('@db/members/value', version), valueBuf)
   // TODO: This should be fully code generated
   return {
@@ -36,58 +84,12 @@ function collection0_reconstruct (version, keyBuf, valueBuf) {
 }
 
 // '@db/members'
-const collection0 = {
-  name: '@db/members',
-  id: 0,
-  stats: true,
-  encodeKey (record) {
-    const key = [record.key, record.id]
-    return collection0_key.encode(key)
-  },
-  encodeKeyRange ({ gt, lt, gte, lte } = {}) {
-    return collection0_key.encodeRange({
-      gt: gt ? collection0_indexify(gt) : null,
-      lt: lt ? collection0_indexify(lt) : null,
-      gte: gte ? collection0_indexify(gte) : null,
-      lte: lte ? collection0_indexify(lte) : null
-    })
-  },
-  encodeValue (version, record) {
-    return c.encode(resolveStruct('@db/members/value', version), record)
-  },
-  trigger: null,
-  reconstruct: collection0_reconstruct,
-  indexes: []
-}
-
-// 'stats' collection key
-const collection1_key = new IndexEncoder([
-  IndexEncoder.UINT
-], { prefix: 1 })
-
-function collection1_indexify (record) {
-  const a = record.id
-  return a === undefined ? [] : [a]
-}
-
-// 'stats' reconstruction function
-function collection1_reconstruct (version, keyBuf, valueBuf) {
-  const key = collection1_key.decode(keyBuf)
-  const value = c.decode(resolveStruct('stats/value', version), valueBuf)
-  // TODO: This should be fully code generated
-  return {
-    id: key[0],
-    ...value
-  }
-}
-
-// 'stats'
 const collection1 = {
-  name: 'stats',
+  name: '@db/members',
   id: 1,
-  stats: false,
-  encodeKey (record) {
-    const key = [record.id]
+  stats: true,
+  encodeKey (record = {}) {
+    const key = [record.key, record.id]
     return collection1_key.encode(key)
   },
   encodeKeyRange ({ gt, lt, gte, lte } = {}) {
@@ -99,22 +101,68 @@ const collection1 = {
     })
   },
   encodeValue (version, record) {
-    return c.encode(resolveStruct('stats/value', version), record)
+    return c.encode(resolveStruct('@db/members/value', version), record)
   },
   trigger: null,
   reconstruct: collection1_reconstruct,
   indexes: []
 }
 
+// 'stats' collection key
+const collection2_key = new IndexEncoder([
+  IndexEncoder.UINT
+], { prefix: 2 })
+
+function collection2_indexify (record) {
+  const a = record.id
+  return a === undefined ? [] : [a]
+}
+
+// 'stats' reconstruction function
+function collection2_reconstruct (version, keyBuf, valueBuf) {
+  const key = collection2_key.decode(keyBuf)
+  const value = c.decode(resolveStruct('stats/value', version), valueBuf)
+  // TODO: This should be fully code generated
+  return {
+    id: key[0],
+    ...value
+  }
+}
+
+// 'stats'
+const collection2 = {
+  name: 'stats',
+  id: 2,
+  stats: false,
+  encodeKey (record = {}) {
+    const key = [record.id]
+    return collection2_key.encode(key)
+  },
+  encodeKeyRange ({ gt, lt, gte, lte } = {}) {
+    return collection2_key.encodeRange({
+      gt: gt ? collection2_indexify(gt) : null,
+      lt: lt ? collection2_indexify(lt) : null,
+      gte: gte ? collection2_indexify(gte) : null,
+      lte: lte ? collection2_indexify(lte) : null
+    })
+  },
+  encodeValue (version, record) {
+    return c.encode(resolveStruct('stats/value', version), record)
+  },
+  trigger: null,
+  reconstruct: collection2_reconstruct,
+  indexes: []
+}
+
 // '@db/members-by-age' collection key
-const index2_key = new IndexEncoder([
+const index3_key = new IndexEncoder([
   IndexEncoder.NONE,
   IndexEncoder.UINT,
   IndexEncoder.NONE,
   IndexEncoder.STRING
-], { prefix: 2 })
+], { prefix: 3 })
 
-function index2_indexify (record) {
+function index3_indexify (record) {
   const arr = []
 
   arr.push(null)
@@ -133,39 +181,40 @@ function index2_indexify (record) {
 }
 
 // '@db/members-by-age'
-const index2 = {
+const index3 = {
   name: '@db/members-by-age',
-  id: 2,
+  id: 3,
   stats: false,
   encodeKey (record) {
-    return index2_key.encode(index2_indexify(record))
+    return index3_key.encode(index3_indexify(record))
   },
   encodeKeyRange ({ gt, lt, gte, lte } = {}) {
-    return index2_key.encodeRange({
-      gt: gt ? index2_indexify(gt) : null,
-      lt: lt ? index2_indexify(lt) : null,
-      gte: gte ? index2_indexify(gte) : null,
-      lte: lte ? index2_indexify(lte) : null
+    return index3_key.encodeRange({
+      gt: gt ? index3_indexify(gt) : null,
+      lt: lt ? index3_indexify(lt) : null,
+      gte: gte ? index3_indexify(gte) : null,
+      lte: lte ? index3_indexify(lte) : null
     })
   },
-  encodeValue: (doc) => index2.collection.encodeKey(doc),
+  encodeValue: (doc) => index3.collection.encodeKey(doc),
   encodeIndexKeys (record, context) {
-    return [index2_key.encode([record.key, record.age, record.key, record.id])]
+    return [index3_key.encode([record.key, record.age, record.key, record.id])]
   },
   reconstruct: (keyBuf, valueBuf) => valueBuf,
-  offset: collection0.indexes.length,
-  collection: collection0
+  offset: collection1.indexes.length,
+  collection: collection1
 }
-collection0.indexes.push(index2)
+collection1.indexes.push(index3)
 
 module.exports = {
   version,
   collections: [
     collection0,
-    collection1
+    collection1,
+    collection2
   ],
   indexes: [
-    index2
+    index3
   ],
   resolveCollection,
   resolveIndex
@@ -173,15 +222,16 @@ module.exports = {
 
 function resolveCollection (name) {
   switch (name) {
-    case '@db/members': return collection0
-    case 'stats': return collection1
+    case '@db/digest': return collection0
+    case '@db/members': return collection1
+    case 'stats': return collection2
     default: return null
   }
 }
 
 function resolveIndex (name) {
   switch (name) {
-    case '@db/members-by-age': return index2
+    case '@db/members-by-age': return index3
     default: return null
   }
 }

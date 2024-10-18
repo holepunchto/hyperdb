@@ -36,6 +36,12 @@ const db = HyperDB.from(SCHEMA_DIR, DB_DIR)
 const testDb = db.namespace('db')
 
 testDb.collections.register({
+  name: 'digest',
+  schema: '@db/member',
+  key: ['key']
+})
+
+testDb.collections.register({
   name: 'members',
   stats: true,
   schema: '@db/member',

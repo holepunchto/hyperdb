@@ -6,7 +6,6 @@
       "name": "members",
       "namespace": "db",
       "id": 0,
-      "stats": true,
       "type": 1,
       "indexes": [
         "@db/members-by-age"
@@ -19,24 +18,9 @@
       "trigger": null
     },
     {
-      "name": "stats",
-      "namespace": null,
-      "id": 1,
-      "stats": false,
-      "type": 1,
-      "indexes": [],
-      "schema": "stats",
-      "derived": false,
-      "key": [
-        "id"
-      ],
-      "trigger": null
-    },
-    {
       "name": "members-by-age",
       "namespace": "db",
-      "id": 2,
-      "stats": false,
+      "id": 1,
       "type": 2,
       "collection": "@db/members",
       "unique": false,

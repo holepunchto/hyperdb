@@ -7,14 +7,16 @@ const { version, resolveStruct } = require('./messages.js')
 
 // '@db/members' collection key
 const collection0_key = new IndexEncoder([
-  IndexEncoder.NONE,
+  undefined,
   IndexEncoder.STRING
 ], { prefix: 0 })
 
 function collection0_indexify (record) {
   const arr = []
 
-  arr.push(null)
+  const a0 = record.key
+  if (a0 === undefined) return arr
+  arr.push(a0)
 
   const a1 = record.id
   if (a1 === undefined) return arr
@@ -39,7 +41,6 @@ function collection0_reconstruct (version, keyBuf, valueBuf) {
 const collection0 = {
   name: '@db/members',
   id: 0,
-  stats: true,
   encodeKey (record) {
     const key = [record.key, record.id]
     return collection0_key.encode(key)
@@ -60,70 +61,28 @@ const collection0 = {
   indexes: []
 }
 
-// 'stats' collection key
-const collection1_key = new IndexEncoder([
-  IndexEncoder.UINT
+// '@db/members-by-age' collection key
+const index1_key = new IndexEncoder([
+  undefined,
+  IndexEncoder.UINT,
+  undefined,
+  IndexEncoder.STRING
 ], { prefix: 1 })
 
-function collection1_indexify (record) {
-  const a = record.id
-  return a === undefined ? [] : [a]
-}
-
-// 'stats' reconstruction function
-function collection1_reconstruct (version, keyBuf, valueBuf) {
-  const key = collection1_key.decode(keyBuf)
-  const value = c.decode(resolveStruct('stats/value', version), valueBuf)
-  // TODO: This should be fully code generated
-  return {
-    id: key[0],
-    ...value
-  }
-}
-
-// 'stats'
-const collection1 = {
-  name: 'stats',
-  id: 1,
-  stats: false,
-  encodeKey (record) {
-    const key = [record.id]
-    return collection1_key.encode(key)
-  },
-  encodeKeyRange ({ gt, lt, gte, lte } = {}) {
-    return collection1_key.encodeRange({
-      gt: gt ? collection1_indexify(gt) : null,
-      lt: lt ? collection1_indexify(lt) : null,
-      gte: gte ? collection1_indexify(gte) : null,
-      lte: lte ? collection1_indexify(lte) : null
-    })
-  },
-  encodeValue (version, record) {
-    return c.encode(resolveStruct('stats/value', version), record)
-  },
-  trigger: null,
-  reconstruct: collection1_reconstruct,
-  indexes: []
-}
-
-// '@db/members-by-age' collection key
-const index2_key = new IndexEncoder([
-  IndexEncoder.NONE,
-  IndexEncoder.UINT,
-  IndexEncoder.NONE,
-  IndexEncoder.STRING
-], { prefix: 2 })
-
-function index2_indexify (record) {
+function index1_indexify (record) {
   const arr = []
 
-  arr.push(null)
+  const a0 = record.key
+  if (a0 === undefined) return arr
+  arr.push(a0)
 
   const a1 = record.age
   if (a1 === undefined) return arr
   arr.push(a1)
 
-  arr.push(null)
+  const a2 = record.key
+  if (a2 === undefined) return arr
+  arr.push(a2)
 
   const a3 = record.id
   if (a3 === undefined) return arr
@@ -133,39 +92,37 @@ function index2_indexify (record) {
 }
 
 // '@db/members-by-age'
-const index2 = {
+const index1 = {
   name: '@db/members-by-age',
-  id: 2,
-  stats: false,
+  id: 1,
   encodeKey (record) {
-    return index2_key.encode(index2_indexify(record))
+    return index1_key.encode(index1_indexify(record))
   },
   encodeKeyRange ({ gt, lt, gte, lte } = {}) {
-    return index2_key.encodeRange({
-      gt: gt ? index2_indexify(gt) : null,
-      lt: lt ? index2_indexify(lt) : null,
-      gte: gte ? index2_indexify(gte) : null,
-      lte: lte ? index2_indexify(lte) : null
+    return index1_key.encodeRange({
+      gt: gt ? index1_indexify(gt) : null,
+      lt: lt ? index1_indexify(lt) : null,
+      gte: gte ? index1_indexify(gte) : null,
+      lte: lte ? index1_indexify(lte) : null
     })
   },
-  encodeValue: (doc) => index2.collection.encodeKey(doc),
+  encodeValue: (doc) => index1.collection.encodeKey(doc),
   encodeIndexKeys (record, context) {
-    return [index2_key.encode([record.key, record.age, record.key, record.id])]
+    return [index1_key.encode([record.key, record.age, record.key, record.id])]
   },
   reconstruct: (keyBuf, valueBuf) => valueBuf,
   offset: collection0.indexes.length,
   collection: collection0
 }
-collection0.indexes.push(index2)
+collection0.indexes.push(index1)
 
 module.exports = {
   version,
   collections: [
-    collection0,
-    collection1
+    collection0
   ],
   indexes: [
-    index2
+    index1
   ],
   resolveCollection,
   resolveIndex
@@ -174,14 +131,13 @@ module.exports = {
 function resolveCollection (name) {
   switch (name) {
     case '@db/members': return collection0
-    case 'stats': return collection1
     default: return null
   }
 }
 
 function resolveIndex (name) {
   switch (name) {
-    case '@db/members-by-age': return index2
+    case '@db/members-by-age': return index1
     default: return null
   }
 }

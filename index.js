@@ -5,18 +5,15 @@ const b4a = require('b4a')
 const RocksEngine = require('./lib/engine/rocks')
 const BeeEngine = require('./lib/engine/bee')
 
-const STATS = 'stats'
-
 let compareHasDups = false
 
 class Updates {
-  constructor (clock, tick, entries, stats) {
+  constructor (clock, tick, entries) {
     this.refs = 1
     this.mutating = 0
     this.tick = tick // internal tie breaker clock for same key updates
     this.clock = clock // engine clock
     this.map = new Map(entries)
-    this.stats = new Map(stats)
   }
 
   get size () {
@@ -50,17 +47,8 @@ class Updates {
       }
     }
 
-    const stats = new Array(this.stats.size)
-
-    if (stats.length > 0) {
-      let i = 0
-      for (const [col, st] of this.stats) {
-        stats[i++] = [col, st]
-      }
-    }
-
     this.refs--
-    return new Updates(this.clock, this.tick, entries, stats)
+    return new Updates(this.clock, this.tick, entries)
   }
 
   get (key) {
@@ -87,22 +75,7 @@ class Updates {
 
   flush (clock) {
     this.clock = clock
-    this.stats.clear()
     this.map.clear()
-  }
-
-  prestats (collectionOrIndex, engine) {
-    const st = this.stats.get(collectionOrIndex)
-    if (st) return st
-
-    const state = {
-      key: null,
-      value: null,
-      promise: null
-    }
-
-    this.stats.set(collectionOrIndex, state)
-    return state
   }
 
   update (collection, key, value) {
@@ -124,22 +97,6 @@ class Updates {
 
   entries () {
     return this.map.values()
-  }
-
-  indexStatsOverlay (index) {
-    throw new Error('Index stats are not currently implemented, open an issue')
-  }
-
-  collectionStatsOverlay (collection) {
-    const info = { count: 0 }
-
-    for (const u of this.map.values()) {
-      if (u.collection !== collection) continue
-      if (u.value === null) info.count--
-      else if (u.created) info.count++
-    }
-
-    return info
   }
 
   collectionOverlay (collection, range, reverse) {
@@ -382,45 +339,6 @@ class HyperDB {
     return this._getCollection(index.collection, snap, index.reconstruct(key, value))
   }
 
-  async stats (indexName) {
-    const collection = this.definition.resolveCollection(indexName)
-    const index = collection === null ? this.definition.resolveIndex(indexName) : null
-
-    if (collection === null && index === null) throw new Error('Unknown index: ' + indexName)
-
-    const target = collection || index
-    const st = await this.get(STATS, { id: target.id })
-
-    const overlay = index ? this.updates.indexStatsOverlay(index) : this.updates.collectionStatsOverlay(collection)
-
-    if (!st) return overlay
-
-    st.count += overlay.count
-    return st
-  }
-
-  async _getPrev (key, collection) {
-    const st = collection.stats === true ? this.updates.prestats(collection) : null
-
-    if (st !== null && !st.promise && !st.value) {
-      const statsCollection = this.definition.resolveCollection(STATS)
-
-      st.key = statsCollection.encodeKey({ id: collection.id })
-      st.promise = this.engine.getBatch(this.engineSnapshot, [key, st.key])
-
-      const [value, stats] = await st.promise
-
-      st.value = stats === null ? statsCollection.encodeValue(this.version, { count: 0 }) : stats
-      st.promise = null
-
-      return value
-    }
-
-    const value = await this.engine.get(this.engineSnapshot, key)
-    if (st !== null && st.promise !== null) await st.promise
-    return value
-  }
-
   // TODO: needs to wait for pending inserts/deletes and then lock all future ones whilst it runs
   _runTrigger (collection, key, doc) {
     return collection.trigger(this, key, doc, this.context)
@@ -440,7 +358,7 @@ class HyperDB {
     this.updates.mutating++
     try {
       if (collection.trigger !== null) await this._runTrigger(collection, doc, null)
-      prevValue = await this._getPrev(key, collection)
+      prevValue = await this.engine.get(this.engineSnapshot, key)
     } finally {
       this.updates.mutating--
     }
@@ -480,7 +398,7 @@ class HyperDB {
     this.updates.mutating++
     try {
       if (collection.trigger !== null) await this._runTrigger(collection, doc, doc)
-      prevValue = await this._getPrev(key, collection)
+      prevValue = await this.engine.get(this.engineSnapshot, key)
     } finally {
       this.updates.mutating--
     }
@@ -525,18 +443,6 @@ class HyperDB {
     }
   }
 
-  _applyStats () {
-    const statsCollection = this.definition.resolveCollection(STATS)
-    for (const [collection, { key, value }] of this.updates.stats) {
-      const stats = statsCollection.reconstruct(this.version, key, value)
-      const overlay = this.updates.collectionStatsOverlay(collection)
-      stats.count += overlay.count
-      const updatedValue = statsCollection.encodeValue(this.version, stats)
-      if (b4a.equals(value, updatedValue)) continue
-      this.updates.update(statsCollection, key, updatedValue)
-    }
-  }
-
   async flush () {
     maybeClosed(this)
 
@@ -545,8 +451,6 @@ class HyperDB {
     if (this.updates.size === 0) return
     if (this.updates.clock !== this.engine.clock) throw new Error('Database has changed, refusing to commit')
     if (this.updates.refs > 1) this.updates = this.updates.detach()
-
-    if (this.updates.stats.size) this._applyStats()
 
     await this.engine.commit(this.updates)
 

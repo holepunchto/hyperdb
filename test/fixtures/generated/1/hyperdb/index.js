@@ -30,7 +30,6 @@ function collection0_reconstruct (version, keyBuf, valueBuf) {
 const collection0 = {
   name: '@db/members',
   id: 0,
-  stats: false,
   encodeKey (record) {
     const key = [record.id]
     return collection0_key.encode(key)
@@ -75,7 +74,6 @@ function index1_indexify (record) {
 const index1 = {
   name: '@db/members-by-age',
   id: 1,
-  stats: false,
   encodeKey (record) {
     return index1_key.encode(index1_indexify(record))
   },

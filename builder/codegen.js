@@ -210,7 +210,6 @@ function generateCollectionDefinition (collection) {
   str += `const ${id} = {\n`
   str += `  name: ${s(collection.fqn)},\n`
   str += `  id: ${collection.id},\n`
-  str += `  stats: ${collection.stats},\n`
   str += generateEncodeCollectionKey(collection, ',')
   str += generateEncodeKeyRange(collection, ',')
   str += generateEncodeCollectionValue(collection, ',')
@@ -230,7 +229,6 @@ function generateIndexDefinition (index) {
   str += `const ${id} = {\n`
   str += `  name: ${s(index.fqn)},\n`
   str += `  id: ${index.id},\n`
-  str += `  stats: ${index.stats},\n`
   str += generateEncodeIndexKey(index, ',')
   str += generateEncodeKeyRange(index, ',')
   str += `  encodeValue: (doc) => ${id}.collection.encodeKey(doc),\n`

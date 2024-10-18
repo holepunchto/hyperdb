@@ -53,52 +53,10 @@ const encoding1 = {
   }
 }
 
-// stats
-const encoding2 = {
-  preencode (state, m) {
-    c.uint.preencode(state, m.id)
-    c.uint.preencode(state, m.count)
-  },
-  encode (state, m) {
-    c.uint.encode(state, m.id)
-    c.uint.encode(state, m.count)
-  },
-  decode (state) {
-    const res = {}
-    res.id = 0
-    res.count = 0
-
-    res.id = c.uint.decode(state)
-    res.count = c.uint.decode(state)
-
-    return res
-  }
-}
-
-// stats/value
-const encoding3 = {
-  preencode (state, m) {
-    c.uint.preencode(state, m.count)
-  },
-  encode (state, m) {
-    c.uint.encode(state, m.count)
-  },
-  decode (state) {
-    const res = {}
-    res.count = 0
-
-    res.count = c.uint.decode(state)
-
-    return res
-  }
-}
-
 function getStructByName (name) {
   switch (name) {
     case '@db/member': return encoding0
     case '@db/members/value': return encoding1
-    case 'stats': return encoding2
-    case 'stats/value': return encoding3
     default: throw new Error('Encoder not found ' + name)
   }
 }

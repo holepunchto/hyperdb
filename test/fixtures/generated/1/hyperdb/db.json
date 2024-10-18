@@ -6,7 +6,6 @@
       "name": "members",
       "namespace": "db",
       "id": 0,
-      "stats": false,
       "type": 1,
       "indexes": [
         "@db/members-by-age"
@@ -22,7 +21,6 @@
       "name": "members-by-age",
       "namespace": "db",
       "id": 1,
-      "stats": false,
       "type": 2,
       "collection": "@db/members",
       "unique": false,

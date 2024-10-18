@@ -19,7 +19,6 @@ class DBType {
     this.fqn = getFQN(this.namespace, this.description.name)
     this.key = description.key
     this.fullKey = []
-    this.stats = !!description.stats
 
     this.isMapped = false
     this.isIndex = false
@@ -57,8 +56,7 @@ class DBType {
       name: this.description.name,
       unsafe: this.description.unsafe,
       namespace: this.namespace,
-      id: this.id,
-      stats: this.stats
+      id: this.id
     }
   }
 }
@@ -241,7 +239,6 @@ class Builder {
     this.typesById = new Map()
     this.orderedTypes = []
 
-    this.registeredStats = false
     this.currentOffset = this.offset
 
     this.initializing = true
@@ -269,31 +266,6 @@ class Builder {
     return { id: this.currentOffset++, prefix: null }
   }
 
-  _registerStats () {
-    if (this.registeredStats) return
-    this.registeredStats = true
-
-    this.schema.register({
-      namespace: null,
-      name: 'stats',
-      derived: true,
-      fields: [{
-        name: 'id',
-        type: 'uint',
-        required: true
-      }, {
-        name: 'count',
-        type: 'uint',
-        required: true
-      }]
-    })
-    this.registerCollection({
-      name: 'stats',
-      schema: 'stats',
-      key: ['id']
-    }, null)
-  }
-
   registerCollection (description, namespace) {
     const fqn = getFQN(namespace, description.name)
     // TODO: also validate this for invalid mutations if it was hydrated from JSON
@@ -303,8 +275,6 @@ class Builder {
 
     this.orderedTypes.push(collection)
     this.typesByName.set(collection.fqn, collection)
-
-    if (collection.stats) this._registerStats()
   }
 
   registerIndex (description, namespace) {

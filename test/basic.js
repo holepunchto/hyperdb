@@ -269,7 +269,7 @@ test('cork/uncork', async function ({ create }, t) {
   db.cork()
   const all = [
     db.insert('@db/members', { id: 'maf', age: 34 }),
-    db.insert('@db/members', { id: 'andrew', age: 30 }),
+    db.insert('@db/members', { id: 'andrew', age: 30 })
   ]
   db.uncork()
 

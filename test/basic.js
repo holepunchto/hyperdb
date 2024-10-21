@@ -247,6 +247,7 @@ test('watch', async function ({ create }, t) {
 
 test('basic reopen', async function ({ create }, t) {
   const storage = await tmp(t)
+
   {
     const db = await create(definition, { storage })
     await db.insert('members', { id: 'maf', age: 34 })
@@ -260,4 +261,19 @@ test('basic reopen', async function ({ create }, t) {
     t.is(all.length, 1)
     await db.close()
   }
+})
+
+test('cork/uncork', async function ({ create }, t) {
+  const db = await create()
+
+  db.cork()
+  const all = [
+    db.insert('@db/members', { id: 'maf', age: 34 }),
+    db.insert('@db/members', { id: 'andrew', age: 30 }),
+  ]
+  db.uncork()
+
+  await Promise.all(all)
+  t.pass('did not crash')
+  await db.close()
 })

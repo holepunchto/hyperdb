@@ -14,10 +14,36 @@ class Updates {
     this.tick = tick // internal tie breaker clock for same key updates
     this.clock = clock // engine clock
     this.map = new Map(entries)
+    this.locks = new Map()
   }
 
   get size () {
     return this.map.size
+  }
+
+  enter (collection) {
+    if (collection.trigger !== null) {
+      if (this.locks.has(collection)) return false
+      this.locks.set(collection, { resolve: null, promise: null })
+    }
+
+    this.mutating++
+    return true
+  }
+
+  exit (collection) {
+    this.mutating--
+    if (collection.trigger === null) return
+    const { resolve } = this.locks.get(collection)
+    this.locks.delete(collection)
+    if (resolve) resolve()
+  }
+
+  wait (collection) {
+    const state = this.locks.get(collection)
+    if (state.promise) return state.promise
+    state.promise = new Promise((resolve) => { state.resolve = resolve })
+    return state.promise
   }
 
   ref () {
@@ -202,6 +228,14 @@ class HyperDB {
     return this.rootInstance !== null && this.rootInstance !== this
   }
 
+  cork () {
+    this.engine.cork()
+  }
+
+  uncork () {
+    this.engine.uncork()
+  }
+
   ready () {
     return this.engine.ready()
   }
@@ -352,34 +386,36 @@ class HyperDB {
     const collection = this.definition.resolveCollection(collectionName)
     if (collection === null) return
 
+    while (this.updates.enter(collection) === false) await this.updates.wait(collection)
+
     const key = collection.encodeKey(doc)
 
     let prevValue = null
-    this.updates.mutating++
+
     try {
-      if (collection.trigger !== null) await this._runTrigger(collection, doc, null)
       prevValue = await this.engine.get(this.engineSnapshot, key)
+      if (collection.trigger !== null) await this._runTrigger(collection, doc, null)
+
+      if (prevValue === null) {
+        this.updates.delete(key)
+        return
+      }
+
+      const prevDoc = collection.reconstruct(this.version, key, prevValue)
+
+      const u = this.updates.update(collection, key, null)
+
+      for (let i = 0; i < collection.indexes.length; i++) {
+        const idx = collection.indexes[i]
+        const del = idx.encodeIndexKeys(prevDoc, this.context)
+        const ups = []
+
+        u.indexes.push(ups)
+
+        for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
+      }
     } finally {
-      this.updates.mutating--
-    }
-
-    if (prevValue === null) {
-      this.updates.delete(key)
-      return
-    }
-
-    const prevDoc = collection.reconstruct(this.version, key, prevValue)
-
-    const u = this.updates.update(collection, key, null)
-
-    for (let i = 0; i < collection.indexes.length; i++) {
-      const idx = collection.indexes[i]
-      const del = idx.encodeIndexKeys(prevDoc, this.context)
-      const ups = []
-
-      u.indexes.push(ups)
-
-      for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
+      this.updates.exit(collection)
     }
   }
 
@@ -391,39 +427,41 @@ class HyperDB {
     const collection = this.definition.resolveCollection(collectionName)
     if (collection === null) throw new Error('Unknown collection: ' + collectionName)
 
+    while (this.updates.enter(collection) === false) await this.updates.wait(collection)
+
     const key = collection.encodeKey(doc)
     const value = collection.encodeValue(this.version, doc)
 
     let prevValue = null
-    this.updates.mutating++
+
     try {
-      if (collection.trigger !== null) await this._runTrigger(collection, doc, doc)
       prevValue = await this.engine.get(this.engineSnapshot, key)
+      if (collection.trigger !== null) await this._runTrigger(collection, doc, doc)
+
+      if (prevValue !== null && b4a.equals(value, prevValue)) return
+
+      const prevDoc = prevValue === null ? null : collection.reconstruct(this.version, key, prevValue)
+
+      const u = this.updates.update(collection, key, value)
+
+      u.created = prevValue === null
+
+      for (let i = 0; i < collection.indexes.length; i++) {
+        const idx = collection.indexes[i]
+        const prevKeys = prevDoc ? idx.encodeIndexKeys(prevDoc, this.context) : []
+        const nextKeys = idx.encodeIndexKeys(doc, this.context)
+        const ups = []
+
+        u.indexes.push(ups)
+
+        const [del, put] = diffKeys(prevKeys, nextKeys)
+        const value = put.length === 0 ? null : idx.encodeValue(doc)
+
+        for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
+        for (let j = 0; j < put.length; j++) ups.push({ key: put[j], value })
+      }
     } finally {
-      this.updates.mutating--
-    }
-
-    if (prevValue !== null && b4a.equals(value, prevValue)) return
-
-    const prevDoc = prevValue === null ? null : collection.reconstruct(this.version, key, prevValue)
-
-    const u = this.updates.update(collection, key, value)
-
-    u.created = prevValue === null
-
-    for (let i = 0; i < collection.indexes.length; i++) {
-      const idx = collection.indexes[i]
-      const prevKeys = prevDoc ? idx.encodeIndexKeys(prevDoc, this.context) : []
-      const nextKeys = idx.encodeIndexKeys(doc, this.context)
-      const ups = []
-
-      u.indexes.push(ups)
-
-      const [del, put] = diffKeys(prevKeys, nextKeys)
-      const value = put.length === 0 ? null : idx.encodeValue(doc)
-
-      for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
-      for (let j = 0; j < put.length; j++) ups.push({ key: put[j], value })
+      this.updates.exit(collection)
     }
   }
 

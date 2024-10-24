@@ -218,7 +218,8 @@ class HyperDB {
   }
 
   static bee (core, definition, options) {
-    return new HyperDB(new BeeEngine(core), definition, options)
+    const extension = !options || (options.extension !== false)
+    return new HyperDB(new BeeEngine(core, { extension }), definition, options)
   }
 
   get db () {

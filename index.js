@@ -217,8 +217,8 @@ class HyperDB {
     return new HyperDB(new RocksEngine(storage), definition, options)
   }
 
-  static bee (core, definition, options) {
-    const extension = !options || (options.extension !== false)
+  static bee (core, definition, options = {}) {
+    const extension = options.extension !== false
     return new HyperDB(new BeeEngine(core, { extension }), definition, options)
   }
 

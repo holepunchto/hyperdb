@@ -1,5 +1,6 @@
-const p = require('path')
-const fs = require('fs')
+const { isBare } = require('which-runtime')
+const p = isBare ? require('bare-path') : require('path')
+const fs = isBare ? require('bare-fs') : require('fs')
 const Hyperschema = require('hyperschema')
 
 const generateCode = require('./codegen')

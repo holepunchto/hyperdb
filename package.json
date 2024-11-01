@@ -13,6 +13,16 @@
     "test": "standard && brittle test/*.js",
     "generate": "rm -rf test/fixtures/generated && node test/fixtures/generate.js"
   },
+  "imports": {
+    "fs": {
+      "bare": "bare-fs",
+      "default": "fs"
+    },
+    "path": {
+      "bare": "bare-path",
+      "default": "path"
+    }
+  },
   "dependencies": {
     "b4a": "^1.6.6",
     "compact-encoding": "^2.15.0",

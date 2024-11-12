@@ -36,6 +36,14 @@ function collection0_reconstruct (version, keyBuf, valueBuf) {
     ...value
   }
 }
+// '@db/members' key reconstruction function
+function collection0_reconstruct_key (keyBuf) {
+  const key = collection0_key.decode(keyBuf)
+  return {
+    key: key[0],
+    id: key[1]
+  }
+}
 
 // '@db/members'
 const collection0 = {
@@ -58,6 +66,7 @@ const collection0 = {
   },
   trigger: null,
   reconstruct: collection0_reconstruct,
+  reconstructKey: collection0_reconstruct_key,
   indexes: []
 }
 

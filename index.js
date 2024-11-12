@@ -205,6 +205,10 @@ class HyperDB {
     return new HyperDB(new BeeEngine(core, { extension }), definition, options)
   }
 
+  get core () {
+    return this.engine.core
+  }
+
   get db () {
     return this.engine.db
   }
@@ -240,6 +244,10 @@ class HyperDB {
   close () {
     if (this.closing === null) this.closing = this._close()
     return this.closing
+  }
+
+  changes (range = {}) {
+    return this.engine.changes(this.engineSnapshot, this.version, this.definition, range)
   }
 
   watch (fn) {

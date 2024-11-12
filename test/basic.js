@@ -297,3 +297,46 @@ test('updates can be queryies', async function ({ create }, t) {
 
   await db.close()
 })
+
+test('changes', async function ({ create }, t) {
+  const db = await create()
+
+  if (!db.core) {
+    t.comment('not supported on rocks')
+    await db.close()
+    return
+  }
+
+  await db.insert('@db/members', { id: 'maf', age: 50 })
+  await db.insert('@db/members', { id: 'andrew', age: 40 })
+  await db.flush()
+
+  let ops = []
+  for await (const op of db.changes()) ops.push(op)
+
+  t.alike(ops, [
+    { type: 'insert', seq: 2, collection: '@db/members', value: { id: 'maf', age: 50 } },
+    { type: 'insert', seq: 4, collection: '@db/members', value: { id: 'andrew', age: 40 } }
+  ])
+
+  await db.delete('@db/members', { id: 'andrew' })
+  await db.flush()
+
+  ops = []
+  for await (const op of db.changes()) ops.push(op)
+
+  t.alike(ops, [
+    { type: 'insert', seq: 2, collection: '@db/members', value: { id: 'maf', age: 50 } },
+    { type: 'insert', seq: 4, collection: '@db/members', value: { id: 'andrew', age: 40 } },
+    { type: 'delete', seq: 6, collection: '@db/members', value: { id: 'andrew' } }
+  ])
+
+  ops = []
+  for await (const op of db.changes({ gt: 4 })) ops.push(op)
+
+  t.alike(ops, [
+    { type: 'delete', seq: 6, collection: '@db/members', value: { id: 'andrew' } }
+  ])
+
+  await db.close()
+})

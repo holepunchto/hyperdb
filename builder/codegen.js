@@ -205,6 +205,21 @@ function generateCollectionDefinition (collection) {
   }
   str += '}\n'
 
+  str += `// ${s(collection.fqn)} key reconstruction function\n`
+  str += `function ${id}_reconstruct_key (keyBuf) {\n`
+  if (collection.key.length) str += `  const key = ${id}_key.decode(keyBuf)\n`
+  if (collection.key.length === 0) {
+    str += '  return {}\n'
+  } else {
+    str += '  return {\n'
+    for (let i = 0; i < collection.key.length; i++) {
+      const key = collection.key[i]
+      str += `    ${gen.property(key)}: key[${i}]${i < collection.key.length - 1 ? ',' : ''}\n`
+    }
+    str += '  }\n'
+  }
+  str += '}\n'
+
   str += '\n'
   str += `// ${s(collection.fqn)}\n`
   str += `const ${id} = {\n`
@@ -215,6 +230,7 @@ function generateCollectionDefinition (collection) {
   str += generateEncodeCollectionValue(collection, ',')
   str += `  trigger: ${collection.trigger ? id + '_trigger' : 'null'},\n`
   str += `  reconstruct: ${id}_reconstruct,\n`
+  str += `  reconstructKey: ${id}_reconstruct_key,\n`
   str += '  indexes: []\n'
   str += '}\n'
   return str

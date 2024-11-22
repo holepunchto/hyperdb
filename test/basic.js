@@ -340,3 +340,21 @@ test('changes', async function ({ create }, t) {
 
   await db.close()
 })
+
+test('update does not break existing snaps', async function ({ create }, t) {
+  const db = await create()
+
+  await db.insert('@db/members', { id: 'maf', age: 50 })
+  await db.insert('@db/members', { id: 'andrew', age: 40 })
+
+  await db.flush()
+
+  const ite = db.find('@db/members')
+
+  db.update()
+
+  const all = await ite.toArray()
+  t.is(all.length, 2)
+
+  await db.close()
+})

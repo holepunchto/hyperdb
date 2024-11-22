@@ -349,16 +349,21 @@ class HyperDB {
     return u !== null
   }
 
-  get (collectionName, doc) {
+  async get (collectionName, doc) {
     const snap = this.engineSnapshot
+    if (snap !== null) snap.ref()
 
-    const collection = this.definition.resolveCollection(collectionName)
-    if (collection !== null) return this._getCollection(collection, snap, doc)
+    try {
+      const collection = this.definition.resolveCollection(collectionName)
+      if (collection !== null) return await this._getCollection(collection, snap, doc)
 
-    const index = this.definition.resolveIndex(collectionName)
-    if (index !== null) return this._getIndex(index, snap, doc)
+      const index = this.definition.resolveIndex(collectionName)
+      if (index !== null) return await this._getIndex(index, snap, doc)
 
-    return Promise.reject(new Error('Unknown index or collection: ' + collectionName))
+      return Promise.reject(new Error('Unknown index or collection: ' + collectionName))
+    } finally {
+      if (snap !== null) snap.unref()
+    }
   }
 
   async _getCollection (collection, snap, doc) {
@@ -404,12 +409,15 @@ class HyperDB {
 
     while (this.updates.enter(collection) === false) await this.updates.wait(collection)
 
+    const snap = this.engineSnapshot
     const key = collection.encodeKey(doc)
+
+    if (snap !== null) snap.ref()
 
     let prevValue = null
 
     try {
-      prevValue = await this.engine.get(this.engineSnapshot, key)
+      prevValue = await this.engine.get(snap, key)
       if (collection.trigger !== null) await this._runTrigger(collection, doc, null)
 
       if (prevValue === null) {
@@ -431,6 +439,7 @@ class HyperDB {
         for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
       }
     } finally {
+      if (snap !== null) snap.unref()
       this.updates.exit(collection)
     }
   }
@@ -445,13 +454,16 @@ class HyperDB {
 
     while (this.updates.enter(collection) === false) await this.updates.wait(collection)
 
+    const snap = this.engineSnapshot
     const key = collection.encodeKey(doc)
     const value = collection.encodeValue(this.version, doc)
+
+    if (snap !== null) snap.ref()
 
     let prevValue = null
 
     try {
-      prevValue = await this.engine.get(this.engineSnapshot, key)
+      prevValue = await this.engine.get(snap, key)
       if (collection.trigger !== null) await this._runTrigger(collection, doc, doc)
 
       if (prevValue !== null && b4a.equals(value, prevValue)) return
@@ -477,11 +489,12 @@ class HyperDB {
         for (let j = 0; j < put.length; j++) ups.push({ key: put[j], value })
       }
     } finally {
+      if (snap !== null) snap.unref()
       this.updates.exit(collection)
     }
   }
 
-  reload () {
+  update () {
     maybeClosed(this)
 
     if (this.updates.refs > 1) this.updates = this.updates.detach()
@@ -508,9 +521,9 @@ class HyperDB {
 
     await this.engine.commit(this.updates)
 
-    this.reload()
+    this.update()
 
-    if (this.rootInstance !== this && this.rootInstance.updates.size === 0) this.rootInstance.reload()
+    if (this.rootInstance !== this && this.rootInstance.updates.size === 0) this.rootInstance.update()
     if (this.autoClose === true) await this.close()
   }
 }

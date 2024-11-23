@@ -289,11 +289,15 @@ class HyperDB {
   }
 
   snapshot (options) {
+    maybeClosed(this)
+
     const context = (options && options.context) || this.context
     return this._createSnapshot(null, false, context)
   }
 
   transaction (options) {
+    maybeClosed(this)
+
     if (this.rootInstance !== this) {
       throw new Error('Can only make transactions on main instance')
     }
@@ -529,7 +533,7 @@ class HyperDB {
 }
 
 function maybeClosed (db) {
-  if (db.closing !== null) throw new Error('Closed')
+  if (db.closing !== null) throw new Error('Hyperdb is closed')
 }
 
 function withinRange (range, key) {

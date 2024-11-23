@@ -10,6 +10,7 @@ const rocksTest = createTester('rocks')
 const beeTest = createTester('bee')
 
 exports.test = test
+exports.replicate = replicate
 
 // solo just runs the rocks
 test.solo = rocksTest.solo
@@ -29,8 +30,8 @@ function test (name, fn) {
 
 function createTester (type) {
   const make = type === 'rocks'
-    ? (dir, ...args) => HyperDB.rocks(dir, ...args)
-    : (dir, ...args) => HyperDB.bee(new Hypercore(dir), ...args)
+    ? (dir, def, opts = {}) => HyperDB.rocks(dir, def, opts)
+    : (dir, def, opts = {}) => HyperDB.bee(new Hypercore(dir, opts.key), def, opts)
 
   const test = runner(brittle)
 
@@ -65,7 +66,7 @@ function creator (t, createHyperDB) {
     // just to help catch leaks
     t.teardown(function () {
       if (!engine.closed) throw new Error('Test has a leak, engine did not close')
-    })
+    }, { order: Infinity })
 
     return db
   }
@@ -78,3 +79,23 @@ function builder (t, create) {
     return create(path.join(dir, 'db'), require(path.join(dir, 'hyperdb')))
   }
 }
+
+function replicate (t, a, b) {
+  const s1 = a.core.replicate(true)
+  const s2 = b.core.replicate(false)
+
+  s1.pipe(s2).pipe(s1)
+
+  t.teardown(() => Promise.all([destroy(s1), destroy(s2)]))
+
+  function destroy (s) {
+    if (s.destroyed) return
+    return new Promise(resolve => {
+      s.on('error', noop)
+      s.on('close', resolve)
+      s.destroy()
+    })
+  }
+}
+
+function noop () {}

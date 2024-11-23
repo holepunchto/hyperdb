@@ -8,11 +8,10 @@ const BeeEngine = require('./lib/engine/bee')
 let compareHasDups = false
 
 class Updates {
-  constructor (clock, tick, entries) {
+  constructor (tick, entries) {
     this.refs = 1
     this.mutating = 0
     this.tick = tick // internal tie breaker clock for same key updates
-    this.clock = clock // engine clock
     this.map = new Map(entries)
     this.locks = new Map()
   }
@@ -74,7 +73,7 @@ class Updates {
     }
 
     this.refs--
-    return new Updates(this.clock, this.tick, entries)
+    return new Updates(this.tick, entries)
   }
 
   get (key) {
@@ -99,8 +98,7 @@ class Updates {
     return null
   }
 
-  flush (clock) {
-    this.clock = clock
+  flush () {
     this.map.clear()
   }
 
@@ -174,7 +172,7 @@ class HyperDB {
   constructor (engine, definition, {
     version = definition.version,
     snapshot = engine.snapshot(),
-    updates = new Updates(engine.clock, 0, [], []),
+    updates = new Updates([], []),
     rootInstance = null,
     writable = true,
     context = null
@@ -201,8 +199,18 @@ class HyperDB {
   }
 
   static bee (core, definition, options = {}) {
-    const extension = options.extension !== false
-    return new HyperDB(new BeeEngine(core, { extension }), definition, options)
+    const extension = options.extension
+    const autoUpdate = !!options.autoUpdate
+
+    const db = new HyperDB(new BeeEngine(core, { extension }), definition, options)
+
+    if (autoUpdate) {
+      const update = db.update.bind(db)
+      core.on('append', update)
+      core.on('truncate', update)
+    }
+
+    return db
   }
 
   get core () {
@@ -501,10 +509,14 @@ class HyperDB {
   update () {
     maybeClosed(this)
 
-    if (this.updates.refs > 1) this.updates = this.updates.detach()
-    this.updates.flush(this.engine.clock)
+    if (this.engineSnapshot !== null && !this.engine.outdated(this.engineSnapshot)) {
+      return
+    }
 
-    if (this.engineSnapshot) {
+    if (this.updates.refs > 1) this.updates = this.updates.detach()
+    this.updates.flush()
+
+    if (this.engineSnapshot !== null) {
       this.engineSnapshot.unref()
       this.engineSnapshot = this.engine.snapshot()
     }
@@ -517,10 +529,12 @@ class HyperDB {
   async flush () {
     maybeClosed(this)
 
+    if (this.engineSnapshot.opened === false) await this.engineSnapshot.ready()
+
     if (this.updating > 0) throw new Error('Insert/delete in progress, refusing to commit')
     if (this.rootInstance === null) throw new Error('Instance is not writable, refusing to commit')
     if (this.updates.size === 0) return
-    if (this.updates.clock !== this.engine.clock) throw new Error('Database has changed, refusing to commit')
+    if (this.engine.outdated(this.engineSnapshot)) throw new Error('Database has changed, refusing to commit')
     if (this.updates.refs > 1) this.updates = this.updates.detach()
 
     await this.engine.commit(this.updates)

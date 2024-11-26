@@ -172,7 +172,7 @@ class HyperDB {
   constructor (engine, definition, {
     version = definition.version,
     snapshot = engine.snapshot(),
-    updates = new Updates([], []),
+    updates = new Updates(0, []),
     rootInstance = null,
     writable = true,
     context = null

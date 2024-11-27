@@ -121,6 +121,20 @@ When you flush this one, it updates the main instance also.
 
 Close the database. You have to close any snapshots you use also.
 
+## Builder API
+
+See [example](./builder/example.js).
+
+Each field in the builder file is an object:
+```
+{
+  name: 'field-name',
+  type: 'uint', // a compact-encoding type, or a reference to another encoding defined in the builder file
+  required: true, // false for optional
+  array: false // Store an array of 'type', instead of just one (default false)
+}
+```
+
 ## License
 
 Apache-2.0

@@ -80,6 +80,7 @@ class Collection extends DBType {
     if (this.key.length) {
       for (const component of this.key) {
         const field = this.schema.fieldsByName.get(component)
+        if (!field) throw new Error('Field not found: ' + component)
         const resolvedType = this.builder.schema.resolve(field.type.fqn, { aliases: false })
         this.keyEncoding.push(resolvedType.name)
       }

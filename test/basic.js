@@ -358,3 +358,27 @@ test('update does not break existing snaps', async function ({ create }, t) {
 
   await db.close()
 })
+
+test('batch', async function ({ create }, t) {
+  const db = await create()
+
+  await Promise.all([
+    run('maf', 99),
+    run('andrew', 19),
+    run('someone', 49)
+  ])
+
+  t.alike(await db.find('@db/members').toArray(), [
+    { id: 'andrew', age: 19 },
+    { id: 'maf', age: 99 },
+    { id: 'someone', age: 49 }
+  ])
+
+  await db.close()
+
+  async function run (id, age) {
+    const tx = await db.batch()
+    await tx.insert('@db/members', { id, age })
+    await tx.flush()
+  }
+})

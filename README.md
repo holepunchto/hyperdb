@@ -117,6 +117,11 @@ Make a readonly snapshot of the database. All reads/streams are locked in time o
 Make a writable snapshot of the database. All reads/streams are locked in time on a snapshot from the time you call the snapshot method.
 When you flush this one, it updates the main instance also.
 
+#### `db = await db.batch()`
+
+Make a writable shared transaction (batch). Using a batched transaction requires no additional locking, with the caveat that someone
+else who is also using the transaction might be mutating the same tx.
+
 #### `await db.close()`
 
 Close the database. You have to close any snapshots you use also.

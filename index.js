@@ -1,5 +1,6 @@
 const IndexStream = require('./lib/stream')
 const b4a = require('b4a')
+const DBLock = require('db-lock')
 
 // engines
 const RocksEngine = require('./lib/engine/rocks')
@@ -175,6 +176,7 @@ class HyperDB {
     updates = new Updates(0, []),
     rootInstance = null,
     writable = true,
+    lock = null,
     context = null
   } = {}) {
     this.version = version
@@ -186,6 +188,9 @@ class HyperDB {
     this.rootInstance = writable === true ? (rootInstance || this) : null
     this.watchers = null
     this.closing = null
+    this.lock = lock
+
+    if (this.lock === null) initLock(this)
 
     engine.refs++
   }
@@ -292,6 +297,7 @@ class HyperDB {
       updates: this.updates.ref(),
       rootInstance,
       writable,
+      lock: this.lock,
       context
     })
   }
@@ -316,6 +322,10 @@ class HyperDB {
     tx.update()
 
     return tx
+  }
+
+  batch () {
+    return this.lock.enter()
   }
 
   find (indexName, query = {}, options) {
@@ -530,7 +540,12 @@ class HyperDB {
     }
   }
 
-  async flush () {
+  flush () {
+    if (this === this.lock.state) return this.lock.exit()
+    return this._flush()
+  }
+
+  async _flush () {
     maybeClosed(this)
 
     if (this.engineSnapshot.opened === false) await this.engineSnapshot.ready()
@@ -636,6 +651,18 @@ function sortOverlay (overlay, reverse) {
   overlay.sort(reverse ? reverseCompareOverlay : compareOverlay)
   if (compareHasDups === true) stripDups(overlay)
   return overlay
+}
+
+function initLock (db) {
+  db.lock = new DBLock({
+    maxParallel: 512,
+    enter () {
+      return db.transaction()
+    },
+    exit (tx) {
+      return tx._flush()
+    }
+  })
 }
 
 module.exports = HyperDB

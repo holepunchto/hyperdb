@@ -472,7 +472,12 @@ class HyperDB {
 
     const snap = this.engineSnapshot
     const key = collection.encodeKey(doc)
-    const value = collection.encodeValue(this.version, doc)
+    let value
+    try {
+      value = collection.encodeValue(this.version, doc)
+    } catch (error) {
+      throw new Error(collectionName + ': failed to encode value for insertion')
+    }
 
     if (snap !== null) snap.ref()
 

@@ -227,11 +227,11 @@ class BuilderNamespace {
   }
 }
 
-class Builder {
-  constructor (schema, dbJson, { offset, dbDir = null, schemaDir = null } = {}) {
+class Builder { // we default offset to 16 so we have "space" to overlay other things per default, zero cost
+  constructor (schema, dbJson, { offset = 16, dbDir = null, schemaDir = null } = {}) {
     this.schema = schema
     this.version = dbJson ? dbJson.version : 0
-    this.offset = dbJson ? dbJson.offset : (offset || 0)
+    this.offset = dbJson ? dbJson.offset : offset
     this.dbDir = dbDir
     this.schemaDir = schemaDir
 

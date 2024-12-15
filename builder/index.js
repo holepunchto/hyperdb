@@ -244,7 +244,6 @@ class Builder {
     this.offset = dbJson ? dbJson.offset : offset
     this.dbDir = dbDir
     this.schemaDir = schemaDir
-    this.helpers = null
 
     this.namespaces = new Map()
     this.typesByName = new Map()

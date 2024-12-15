@@ -145,6 +145,8 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
   const db = HyperDB.from(paths.schema, paths.db)
   const exampleDB = db.namespace('example')
 
+  exampleDB.require(paths.helpers)
+
   exampleDB.collections.register({
     name: 'devices',
     schema: '@example/devices',
@@ -163,10 +165,7 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
     unique: true,
     key: {
       type: 'string',
-      map (record, context) {
-        const name = record.name.toLowerCase().trim()
-        return name ? [name] : []
-      }
+      map: 'mapNameToLowerCase'
     }
   })
 
@@ -175,10 +174,7 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
     collection: '@example/members',
     key: {
       type: 'uint',
-      map (record, context) {
-        if (record.age < 13 || record.age > 19) return []
-        return [record.age]
-      }
+      map: 'mapTeenager'
     }
   })
 
@@ -188,10 +184,7 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
     unique: true,
     key: {
       type: 'uint',
-      map (record, context) {
-        if (record.age < 13 || record.age > 19) return []
-        return [record.age]
-      }
+      map: 'mapTeenager'
     }
   })
 

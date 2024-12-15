@@ -75,7 +75,7 @@ function creator (t, createHyperDB) {
 function builder (t, create) {
   return async function (builder) {
     const dir = await tmp(t, { dir: path.join(__dirname, '../fixtures/tmp') })
-    await builder(Builder, Hyperschema, { db: path.join(dir, 'hyperdb'), schema: path.join(dir, 'hyperschema') })
+    await builder(Builder, Hyperschema, { db: path.join(dir, 'hyperdb'), schema: path.join(dir, 'hyperschema'), helpers: path.join(__dirname, 'helpers.js') })
     return create(path.join(dir, 'db'), require(path.join(dir, 'hyperdb')))
   }
 }

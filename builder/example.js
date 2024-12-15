@@ -99,6 +99,8 @@ Hyperschema.toDisk(schema)
 const db = HyperDB.from(SCHEMA_DIR, DB_DIR)
 const exampleDb = db.namespace('example')
 
+exampleDb.require('./helpers.js')
+
 exampleDb.collections.register({
   name: 'collection1-info',
   schema: '@example/collection-info',
@@ -109,12 +111,7 @@ exampleDb.collections.register({
   name: 'collection1',
   schema: '@example/record1',
   key: ['id1', 'id2'],
-  trigger: async (db, key, record, context) => {
-    const info = (await db.get('@example/collection1-info')) || { count: 0 }
-    const existing = await db.get('@example/collection1', key)
-    if (existing && record) return
-    await db.insert('@example/collection1-info', { count: record ? info.count + 1 : info.count - 1 })
-  }
+  trigger: 'triggerCollection'
 })
 
 exampleDb.indexes.register({
@@ -133,9 +130,7 @@ exampleDb.indexes.register({
         }
       ]
     },
-    map: (record, context) => [
-      { name: record.name, age: record.age }
-    ]
+    map: 'mapStruct'
   }
 })
 

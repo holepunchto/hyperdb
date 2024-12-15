@@ -70,6 +70,8 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
   const db = HyperDB.from(paths.schema, paths.db)
   const exampleDB = db.namespace('example')
 
+  exampleDB.require(paths.helpers)
+
   exampleDB.collections.register({
     name: 'digest',
     schema: '@example/digest',
@@ -80,18 +82,7 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
     name: 'members',
     schema: '@example/member',
     key: ['name'],
-    async trigger (db, key, record) {
-      const digest = (await db.get('@example/digest')) || { count: 0 }
-
-      const prev = !!(await db.get('@example/members', key))
-      const next = !!record
-
-      if (prev === next) return
-
-      digest.count += next ? 1 : -1
-
-      await db.insert('@example/digest', digest)
-    }
+    trigger: 'triggerCountMembers'
   })
 
   HyperDB.toDisk(db)

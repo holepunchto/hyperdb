@@ -238,15 +238,15 @@ class HyperDB {
   }
 
   cork () {
-    this.engine.cork()
+    this.engineSnapshot.cork()
   }
 
   uncork () {
-    this.engine.uncork()
+    this.engineSnapshot.uncork()
   }
 
   ready () {
-    return this.engine.ready()
+    return this.engineSnapshot.ready()
   }
 
   close () {
@@ -272,7 +272,7 @@ class HyperDB {
     this.updates.unref()
     this.updates = null
 
-    if (this.engineSnapshot) this.engineSnapshot.unref()
+    this.engineSnapshot.unref()
     this.engineSnapshot = null
 
     if (--this.engine.refs === 0) await this.engine.close()
@@ -282,9 +282,7 @@ class HyperDB {
   }
 
   _createSnapshot (rootInstance, writable, context) {
-    const snapshot = this.engineSnapshot === null
-      ? this.engine.snapshot()
-      : this.engineSnapshot.ref()
+    const snapshot = this.engineSnapshot.ref()
 
     return new HyperDB(this.engine, this.definition, {
       version: this.version,
@@ -366,8 +364,7 @@ class HyperDB {
   }
 
   async get (collectionName, doc) {
-    const snap = this.engineSnapshot
-    if (snap !== null) snap.ref()
+    const snap = this.engineSnapshot.ref()
 
     try {
       const collection = this.definition.resolveCollection(collectionName)
@@ -390,7 +387,7 @@ class HyperDB {
     const key = b4a.isBuffer(doc) ? doc : collection.encodeKey(doc)
 
     const u = this.updates.get(key)
-    const value = u !== null ? u.value : await this.engine.get(snap, key)
+    const value = u !== null ? u.value : await snap.get(key)
 
     return value === null ? null : collection.reconstruct(this.version, key, value)
   }
@@ -404,7 +401,7 @@ class HyperDB {
     const u = this.updates.getIndex(index, key)
     if (u !== null) return index.collection.reconstruct(this.version, u.key, u.value)
 
-    const value = await this.engine.get(snap, key)
+    const value = await snap.get(key)
     if (value === null) return null
 
     return this._getCollection(index.collection, snap, index.reconstruct(key, value))
@@ -425,15 +422,13 @@ class HyperDB {
 
     while (this.updates.enter(collection) === false) await this.updates.wait(collection)
 
-    const snap = this.engineSnapshot
+    const snap = this.engineSnapshot.ref()
     const key = collection.encodeKey(doc)
-
-    if (snap !== null) snap.ref()
 
     let prevValue = null
 
     try {
-      prevValue = await this.engine.get(snap, key)
+      prevValue = await this.engineSnapshot.get(key)
       if (collection.trigger !== null) await this._runTrigger(collection, doc, null)
 
       if (prevValue === null) {
@@ -455,7 +450,7 @@ class HyperDB {
         for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
       }
     } finally {
-      if (snap !== null) snap.unref()
+      snap.unref()
       this.updates.exit(collection)
     }
   }
@@ -470,16 +465,14 @@ class HyperDB {
 
     while (this.updates.enter(collection) === false) await this.updates.wait(collection)
 
-    const snap = this.engineSnapshot
+    const snap = this.engineSnapshot.ref()
     const key = collection.encodeKey(doc)
     const value = collection.encodeValue(this.version, doc)
-
-    if (snap !== null) snap.ref()
 
     let prevValue = null
 
     try {
-      prevValue = await this.engine.get(snap, key)
+      prevValue = await this.engineSnapshot.get(key)
       if (collection.trigger !== null) await this._runTrigger(collection, doc, doc)
 
       if (prevValue !== null && b4a.equals(value, prevValue)) return
@@ -505,7 +498,7 @@ class HyperDB {
         for (let j = 0; j < put.length; j++) ups.push({ key: put[j], value })
       }
     } finally {
-      if (snap !== null) snap.unref()
+      snap.unref()
       this.updates.exit(collection)
     }
   }
@@ -513,17 +506,13 @@ class HyperDB {
   update () {
     maybeClosed(this)
 
-    if (this.engineSnapshot !== null && !this.engine.outdated(this.engineSnapshot)) {
-      return
-    }
+    if (!this.engine.outdated(this.engineSnapshot)) return
 
     if (this.updates.refs > 1) this.updates = this.updates.detach()
     this.updates.flush()
 
-    if (this.engineSnapshot !== null) {
-      this.engineSnapshot.unref()
-      this.engineSnapshot = this.engine.snapshot()
-    }
+    this.engineSnapshot.unref()
+    this.engineSnapshot = this.engine.snapshot()
 
     if (this.watchers !== null) {
       for (const fn of this.watchers) fn()

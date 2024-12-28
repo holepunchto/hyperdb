@@ -3,7 +3,7 @@
 
 const { IndexEncoder, c } = require('hyperdb/runtime')
 
-const { version, resolveStruct } = require('./messages.js')
+const { version, getEncoding, setVersion } = require('./messages.js')
 
 // '@db/members' collection key
 const collection0_key = new IndexEncoder([
@@ -15,10 +15,14 @@ function collection0_indexify (record) {
   return a === undefined ? [] : [a]
 }
 
+// '@db/members' value encoding
+const collection0_enc = getEncoding('@db/member/hyperdb#0')
+
 // '@db/members' reconstruction function
 function collection0_reconstruct (version, keyBuf, valueBuf) {
   const key = collection0_key.decode(keyBuf)
-  const record = c.decode(resolveStruct('@db/member/hyperdb#null', version), valueBuf)
+  setVersion(version)
+  const record = c.decode(collection0_enc, valueBuf)
   record.id = key[0]
   return record
 }
@@ -47,7 +51,8 @@ const collection0 = {
     })
   },
   encodeValue (version, record) {
-    return c.encode(resolveStruct('@db/member/hyperdb#null', version), record)
+    setVersion(version)
+    return c.encode(collection0_enc, record)
   },
   trigger: null,
   reconstruct: collection0_reconstruct,

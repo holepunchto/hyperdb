@@ -72,7 +72,7 @@ module.exports = function generateCode (hyperdb, { directory = '.' } = {}) {
   str += '\n'
   str += `const { IndexEncoder, c } = require('${pkg.name}/runtime')\n`
   str += '\n'
-  str += 'const { version, resolveStruct } = require(\'./messages.js\')\n'
+  str += 'const { version, getEncoding, setVersion } = require(\'./messages.js\')\n'
   str += '\n'
 
   for (const ns of hyperdb.namespaces.values()) {
@@ -189,6 +189,10 @@ function generateCollectionDefinition (collection) {
 
   let str = generateCommonPrefix(collection)
 
+  str += `// ${s(collection.fqn)} value encoding\n`
+  str += `const ${id}_enc = getEncoding(${s(collection.valueEncoding)})\n`
+  str += '\n'
+
   if (collection.trigger) {
     str += `// ${s(collection.fqn)} has the following schema defined trigger\n`
     str += `const ${id}_trigger = ${gen('helpers' + collection.getNamespace().id, collection.trigger)}\n`
@@ -198,7 +202,8 @@ function generateCollectionDefinition (collection) {
   str += `// ${s(collection.fqn)} reconstruction function\n`
   str += `function ${id}_reconstruct (version, keyBuf, valueBuf) {\n`
   if (collection.key.length) str += `  const key = ${id}_key.decode(keyBuf)\n`
-  str += `  const record = c.decode(resolveStruct(${s(collection.valueEncoding)}, version), valueBuf)\n`
+  str += '  setVersion(version)\n'
+  str += `  const record = c.decode(${id}_enc, valueBuf)\n`
 
   for (let i = 0; i < collection.key.length; i++) {
     const key = collection.key[i]
@@ -278,9 +283,12 @@ function generateEncodeKeyRange (index, sep) {
 }
 
 function generateEncodeCollectionValue (collection, sep) {
+  const id = getId(collection)
+
   let str = ''
   str += '  encodeValue (version, record) {\n'
-  str += `    return c.encode(resolveStruct(${s(collection.valueEncoding)}, version), record)\n`
+  str += '    setVersion(version)\n'
+  str += `    return c.encode(${id}_enc, record)\n`
   str += `  }${sep}\n`
   return str
 }

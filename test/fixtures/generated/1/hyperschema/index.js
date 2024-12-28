@@ -31,7 +31,8 @@ const encoding0 = {
 }
 
 function setVersion (v) {
-  version = v}
+  version = v
+}
 
 function encode (name, value, v = VERSION) {
   version = v
@@ -40,7 +41,7 @@ function encode (name, value, v = VERSION) {
 
 function decode (name, buffer, v = VERSION) {
   version = v
-  return c.decode(getEncoding(name), value)
+  return c.decode(getEncoding(name), buffer)
 }
 
 function getEncoding (name) {

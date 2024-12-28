@@ -30,7 +30,7 @@ const encoding0 = {
   }
 }
 
-// @db/member/hyperdb#null
+// @db/member/hyperdb#0
 const encoding1 = {
   preencode (state, m) {
     c.uint.preencode(state, m.age)
@@ -49,7 +49,8 @@ const encoding1 = {
 }
 
 function setVersion (v) {
-  version = v}
+  version = v
+}
 
 function encode (name, value, v = VERSION) {
   version = v
@@ -58,13 +59,13 @@ function encode (name, value, v = VERSION) {
 
 function decode (name, buffer, v = VERSION) {
   version = v
-  return c.decode(getEncoding(name), value)
+  return c.decode(getEncoding(name), buffer)
 }
 
 function getEncoding (name) {
   switch (name) {
     case '@db/member': return encoding0
-    case '@db/member/hyperdb#null': return encoding1
+    case '@db/member/hyperdb#0': return encoding1
     default: throw new Error('Encoder not found ' + name)
   }
 }

@@ -65,6 +65,18 @@ class DBType {
   }
 }
 
+function resolvePathToType (name, schema) {
+  const parts = name.split('.')
+
+  let field = schema.fieldsByName.get(parts[0])
+
+  for (let i = 1; i < parts.length && field; i++) {
+    field = field.type.fieldsByName.get(parts[i])
+  }
+
+  return field
+}
+
 class Collection extends DBType {
   constructor (builder, namespace, description) {
     super(builder, namespace, description)
@@ -80,10 +92,10 @@ class Collection extends DBType {
     this.trigger = (typeof description.trigger === 'function') ? description.trigger.toString() : (description.trigger || null)
 
     this.keyEncoding = []
-    this.valueEncoding = this.fqn + '/value'
+
     if (this.key.length) {
       for (const component of this.key) {
-        const field = this.schema.fieldsByName.get(component)
+        const field = resolvePathToType(component, this.schema)
         if (!field) throw new Error('Field not found: ' + component)
         const resolvedType = this.builder.schema.resolve(field.type.fqn, { aliases: false })
         this.keyEncoding.push(resolvedType.name)
@@ -91,15 +103,44 @@ class Collection extends DBType {
     }
 
     // Register a value encoding type (the portion of the record that will not be in the primary key)
-    const primaryKeySet = new Set(this.key)
+    this.valueEncoding = this._deriveValueSchema().fqn
+  }
+
+  _deriveValueSchema (schema = this.schema, prefix = '', primaryKeySet = new Set(this.key)) {
+    const fields = []
+    const type = '/value'
+
+    if (!schema.isStruct) return { external: false, fqn: schema.name }
+
+    let external = false
+
+    for (const f of schema.fields) {
+      const name = prefix ? prefix + '.' + f.name : f.name
+      const cpy = f.toJSON()
+
+      if (primaryKeySet.has(name)) {
+        external = cpy.external = true
+      } else if (this._deriveValueSchema(f.type, name, primaryKeySet).external) {
+        external = true
+      }
+
+      fields.push(cpy)
+    }
+
+    if (!external) {
+      return { external: false, fqn: '@' + schema.namespace + '/' + schema.name }
+    }
+
     this.builder.schema.register({
-      ...this.schema.toJSON(),
+      ...schema.toJSON(),
       derived: true,
       flagsPosition: -1,
-      namespace: this.namespace,
-      name: this.description.name + '/value',
-      fields: this.schema.fields.filter(f => !primaryKeySet.has(f.name)).map(f => f.toJSON())
+      namespace: schema.namespace,
+      name: schema.name + type,
+      fields
     })
+
+    return { external: true, fqn: '@' + schema.namespace + '/' + schema.name + type }
   }
 
   toJSON () {

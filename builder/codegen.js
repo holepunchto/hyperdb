@@ -162,7 +162,7 @@ function generateCommonPrefix (type) {
   if (len === 0) {
     str += '  return []\n'
   } else if (len === 1) {
-    str += `  const a = ${getKeyPath(type.fullKey[0], 'record')}\n`
+    str += `  const a = ${getKeyPath(type.fullKey[0], 'record', true)}\n`
     str += '  return a === undefined ? [] : [a]\n'
   } else {
     str += '  const arr = []\n'
@@ -170,7 +170,7 @@ function generateCommonPrefix (type) {
 
     for (let i = 0; i < len; i++) {
       const key = type.fullKey[i]
-      str += `  const a${i} = ${getKeyPath(key, 'record')}\n`
+      str += `  const a${i} = ${getKeyPath(key, 'record', true)}\n`
       str += `  if (a${i} === undefined) return arr\n`
       str += `  arr.push(a${i})\n`
       str += '\n'
@@ -198,19 +198,14 @@ function generateCollectionDefinition (collection) {
   str += `// ${s(collection.fqn)} reconstruction function\n`
   str += `function ${id}_reconstruct (version, keyBuf, valueBuf) {\n`
   if (collection.key.length) str += `  const key = ${id}_key.decode(keyBuf)\n`
-  str += `  const value = c.decode(resolveStruct(${s(collection.valueEncoding)}, version), valueBuf)\n`
-  if (collection.key.length === 0) {
-    str += '  return value\n'
-  } else {
-    str += '  // TODO: This should be fully code generated\n'
-    str += '  return {\n'
-    for (let i = 0; i < collection.key.length; i++) {
-      const key = collection.key[i]
-      str += `    ${gen.property(key)}: key[${i}],\n`
-    }
-    str += '    ...value\n'
-    str += '  }\n'
+  str += `  const record = c.decode(resolveStruct(${s(collection.valueEncoding)}, version), valueBuf)\n`
+
+  for (let i = 0; i < collection.key.length; i++) {
+    const key = collection.key[i]
+    str += `  ${getKeyPath(key, 'record', false)} = key[${i}]\n`
   }
+
+  str += '  return record\n'
   str += '}\n'
 
   str += `// ${s(collection.fqn)} key reconstruction function\n`
@@ -364,8 +359,8 @@ function getIndexId (index) {
   return 'index' + index.id
 }
 
-function getKeyPath (key, name) {
+function getKeyPath (key, name, optional) {
   if (key === null) return name
-  const r = (a, b, i) => (i === 0) ? gen(a, b) : gen.optional(a, b)
-  return key.split('.').reduce(r, 'record')
+  const r = (a, b, i) => (i === 0 || !optional) ? gen(a, b) : gen.optional(a, b)
+  return key.split('.').reduce(r, name)
 }

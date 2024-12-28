@@ -40,7 +40,6 @@ dbSchema.register({
   ]
 })
 
-
 Hyperschema.toDisk(schema)
 
 const db = HyperDB.from(SCHEMA_DIR, DB_DIR)

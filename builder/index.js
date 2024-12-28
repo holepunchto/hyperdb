@@ -65,18 +65,6 @@ class DBType {
   }
 }
 
-function resolvePathToType (name, schema) {
-  const parts = name.split('.')
-
-  let field = schema.fieldsByName.get(parts[0])
-
-  for (let i = 1; i < parts.length && field; i++) {
-    field = field.type.fieldsByName.get(parts[i])
-  }
-
-  return field
-}
-
 class Collection extends DBType {
   constructor (builder, namespace, description) {
     super(builder, namespace, description)
@@ -128,7 +116,7 @@ class Collection extends DBType {
     }
 
     if (!external) {
-      return { external: false, fqn: '@' + schema.namespace + '/' + schema.name }
+      return { external: false, fqn: getFQN(schema.namespace, schema.name) }
     }
 
     this.builder.schema.register({
@@ -140,7 +128,7 @@ class Collection extends DBType {
       fields
     })
 
-    return { external: true, fqn: '@' + schema.namespace + '/' + schema.name + type }
+    return { external: true, fqn: getFQN(schema.namespace, schema.name + type) }
   }
 
   toJSON () {
@@ -392,4 +380,16 @@ module.exports = Builder
 function getFQN (namespace, name) {
   if (namespace === null) return name
   return '@' + namespace + '/' + name
+}
+
+function resolvePathToType (name, schema) {
+  const parts = name.split('.')
+
+  let field = schema.fieldsByName.get(parts[0])
+
+  for (let i = 1; i < parts.length && field; i++) {
+    field = field.type.fieldsByName.get(parts[i])
+  }
+
+  return field
 }

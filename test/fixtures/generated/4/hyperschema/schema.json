@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "schema": [
+    {
+      "name": "member",
+      "namespace": "db",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "id",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "age",
+          "required": true,
+          "type": "uint",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "nested",
+      "namespace": "db",
+      "compact": false,
+      "flagsPosition": 1,
+      "fields": [
+        {
+          "name": "member",
+          "required": true,
+          "type": "@db/member",
+          "version": 1
+        },
+        {
+          "name": "fun",
+          "type": "bool",
+          "version": 1
+        }
+      ]
+    }
+  ]
+}

@@ -216,16 +216,8 @@ function generateCollectionDefinition (collection) {
   str += `// ${s(collection.fqn)} key reconstruction function\n`
   str += `function ${id}_reconstruct_key (keyBuf) {\n`
   if (collection.key.length) str += `  const key = ${id}_key.decode(keyBuf)\n`
-  if (collection.key.length === 0) {
-    str += '  return {}\n'
-  } else {
-    str += '  return {\n'
-    for (let i = 0; i < collection.key.length; i++) {
-      const key = collection.key[i]
-      str += `    ${gen.property(key)}: key[${i}]${i < collection.key.length - 1 ? ',' : ''}\n`
-    }
-    str += '  }\n'
-  }
+
+  str += generateKeyReconstruct('  ', collection.key, 'key') + '\n'
   str += '}\n'
 
   str += '\n'
@@ -341,6 +333,52 @@ function generateEncodeIndexKey (index, sep) {
 
 function toProps (name, keys) {
   return keys.map(c => c === null ? name : c.split('.').reduce(gen, name))
+}
+
+function generateKeyReconstruct (indent, keys, key) {
+  if (keys.length === 0) return indent + 'return {}\n'
+
+  const grouped = new Map()
+
+  for (let index = 0; index < keys.length; index++) {
+    const k = keys[index].split('.')
+    let map = grouped
+
+    for (let i = 0; i < k.length; i++) {
+      let info = map.get(k[i])
+
+      if (!info) {
+        info = { key: null, index: -1, map: null }
+        map.set(k[i], info)
+      }
+
+      if (i === k.length - 1) {
+        info.key = keys[index]
+        info.index = index
+      } else {
+        map = info.map = new Map()
+      }
+    }
+  }
+
+  return indent + 'return ' + generate(indent, grouped)
+
+  function generate (indent, map) {
+    let s = '{\n'
+    const all = [...map]
+    for (let i = 0; i < all.length; i++) {
+      const [k, v] = all[i]
+      s += indent + `  ${gen.property(k)}: `
+      if (v.index !== -1) {
+        s += `${key}[${v.index}]`
+      } else {
+        s += generate(indent + '  ', v.map)
+      }
+      s += (i === all.length - 1) ? '\n' : ',\n'
+    }
+    s += indent + '}'
+    return s
+  }
 }
 
 function generateIndexKeyEncoding (type) {

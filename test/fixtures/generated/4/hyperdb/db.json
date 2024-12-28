@@ -1,0 +1,19 @@
+{
+  "version": 0,
+  "offset": 0,
+  "schema": [
+    {
+      "name": "nested-members",
+      "namespace": "db",
+      "id": 0,
+      "type": 1,
+      "indexes": [],
+      "schema": "@db/nested",
+      "derived": false,
+      "key": [
+        "member.id"
+      ],
+      "trigger": null
+    }
+  ]
+}

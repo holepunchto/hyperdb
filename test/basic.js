@@ -358,3 +358,47 @@ test('update does not break existing snaps', async function ({ create }, t) {
 
   await db.close()
 })
+
+test('nested keys', async function ({ create, bee }, t) {
+  const db = await create({ fixture: 4 })
+
+  await db.insert('@db/nested-members', { member: { id: 'maf', age: 50 }, fun: true })
+  await db.insert('@db/nested-members', { member: { id: 'andrew', age: 40 }, fun: false })
+
+  await db.flush()
+
+  const all = await db.find('@db/nested-members').toArray()
+  t.is(all.length, 2)
+
+  const one = await db.get('@db/nested-members', { member: { id: 'maf' } })
+  t.alike(one, { member: { id: 'maf', age: 50 }, fun: true })
+
+  await db.delete('@db/nested-members', { member: { id: 'andrew' } })
+  await db.flush()
+
+  if (bee) {
+    t.comment('only test changes feed on bee engine')
+
+    const ops = []
+    for await (const op of db.changes()) ops.push(op)
+
+    t.alike(ops, [{
+      type: 'insert',
+      seq: 1,
+      collection: '@db/nested-members',
+      value: { member: { id: 'maf', age: 50 }, fun: true }
+    }, {
+      type: 'insert',
+      seq: 2,
+      collection: '@db/nested-members',
+      value: { member: { id: 'andrew', age: 40 }, fun: false }
+    }, {
+      type: 'delete',
+      seq: 3,
+      collection: '@db/nested-members',
+      value: { member: { id: 'andrew' } }
+    }])
+  }
+
+  await db.close()
+})

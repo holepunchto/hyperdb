@@ -47,7 +47,7 @@ function createTester (type) {
       return run(id, function (t) {
         const create = creator(t, make)
         const build = builder(t, make)
-        const ctx = { type, create, build }
+        const ctx = { type, create, build, bee: type !== 'rocks' }
         return fn(ctx, t)
       })
     }

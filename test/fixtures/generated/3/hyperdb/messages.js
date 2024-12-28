@@ -22,20 +22,19 @@ const encoding0 = {
     c.uint.encode(state, m.age)
   },
   decode (state) {
-    const res = {}
-    res.key = null
-    res.id = null
-    res.age = 0
+    const r0 = c.none.decode(state)
+    const r1 = c.string.decode(state)
+    const r2 = c.uint.decode(state)
 
-    res.key = c.none.decode(state)
-    res.id = c.string.decode(state)
-    res.age = c.uint.decode(state)
-
-    return res
+    return {
+      key: r0,
+      id: r1,
+      age: r2
+    }
   }
 }
 
-// @db/members/value
+// @db/member/hyperdb#null
 const encoding1 = {
   preencode (state, m) {
     c.uint.preencode(state, m.age)
@@ -44,25 +43,39 @@ const encoding1 = {
     c.uint.encode(state, m.age)
   },
   decode (state) {
-    const res = {}
-    res.age = 0
+    const r2 = c.uint.decode(state)
 
-    res.age = c.uint.decode(state)
-
-    return res
+    return {
+      key: null,
+      id: null,
+      age: r2
+    }
   }
 }
 
-function getStructByName (name) {
+function setVersion (v) {
+  version = v}
+
+function encode (name, value, v = VERSION) {
+  version = v
+  return c.encode(getEncoding(name), value)
+}
+
+function decode (name, buffer, v = VERSION) {
+  version = v
+  return c.decode(getEncoding(name), value)
+}
+
+function getEncoding (name) {
   switch (name) {
     case '@db/member': return encoding0
-    case '@db/members/value': return encoding1
+    case '@db/member/hyperdb#null': return encoding1
     default: throw new Error('Encoder not found ' + name)
   }
 }
 
 function resolveStruct (name, v = VERSION) {
-  const enc = getStructByName(name)
+  const enc = getEncoding(name)
   return {
     preencode (state, m) {
       version = v
@@ -79,4 +92,4 @@ function resolveStruct (name, v = VERSION) {
   }
 }
 
-module.exports = { resolveStruct, version }
+module.exports = { resolveStruct, getEncoding, encode, decode, setVersion, version }

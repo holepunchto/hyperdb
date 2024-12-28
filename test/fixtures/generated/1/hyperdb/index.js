@@ -18,12 +18,9 @@ function collection0_indexify (record) {
 // '@db/members' reconstruction function
 function collection0_reconstruct (version, keyBuf, valueBuf) {
   const key = collection0_key.decode(keyBuf)
-  const value = c.decode(resolveStruct('@db/members/value', version), valueBuf)
-  // TODO: This should be fully code generated
-  return {
-    id: key[0],
-    ...value
-  }
+  const record = c.decode(resolveStruct('@db/member/hyperdb#null', version), valueBuf)
+  record.id = key[0]
+  return record
 }
 // '@db/members' key reconstruction function
 function collection0_reconstruct_key (keyBuf) {
@@ -50,7 +47,7 @@ const collection0 = {
     })
   },
   encodeValue (version, record) {
-    return c.encode(resolveStruct('@db/members/value', version), record)
+    return c.encode(resolveStruct('@db/member/hyperdb#null', version), record)
   },
   trigger: null,
   reconstruct: collection0_reconstruct,

@@ -108,7 +108,7 @@ class Collection extends DBType {
 
   _deriveValueSchema (schema = this.schema, prefix = '', primaryKeySet = new Set(this.key)) {
     const fields = []
-    const type = '/hyperdb#' + this.prefix
+    const type = '/hyperdb#' + this.id
 
     if (!schema.isStruct) return { external: false, fqn: schema.name }
 

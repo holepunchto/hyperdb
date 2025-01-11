@@ -13,6 +13,16 @@
     "test": "standard && brittle test/*.js",
     "generate": "rm -rf test/fixtures/generated && node test/fixtures/generate.js"
   },
+  "exports": {
+    "builder": {
+      "import": "./builder/index.mjs",
+      "default": "./builder/index.js"
+    },
+    "runtime": {
+      "import": "./runtime.mjs",
+      "default": "./runtime.js"
+    }
+  },
   "imports": {
     "fs": {
       "bare": "bare-fs",

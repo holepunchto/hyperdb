@@ -295,6 +295,8 @@ class Builder {
     this.initializing = false
   }
 
+  static esm = false
+
   _assignId (type) {
     const unsafe = type.description.unsafe
     if (unsafe) {
@@ -343,17 +345,23 @@ class Builder {
     }
   }
 
-  static toDisk (hyperdb, dbDir) {
+  static toDisk (hyperdb, dbDir, opts = {}) {
+    if (typeof dbDir === 'object' && dbDir) {
+      opts = dbDir
+      dbDir = null
+    }
     if (!dbDir) dbDir = hyperdb.dbDir
     fs.mkdirSync(dbDir, { recursive: true })
+
+    const { esm = this.esm } = opts
 
     const messagesPath = p.join(p.resolve(dbDir), MESSAGES_FILE_NAME)
     const dbJsonPath = p.join(p.resolve(dbDir), DB_JSON_FILE_NAME)
     const codePath = p.join(p.resolve(dbDir), CODE_FILE_NAME)
 
-    fs.writeFileSync(messagesPath, hyperdb.schema.toCode(), { encoding: 'utf-8' })
+    fs.writeFileSync(messagesPath, hyperdb.schema.toCode({ esm }), { encoding: 'utf-8' })
     fs.writeFileSync(dbJsonPath, JSON.stringify(hyperdb.toJSON(), null, 2), { encoding: 'utf-8' })
-    fs.writeFileSync(codePath, generateCode(hyperdb, { directory: dbDir }), { encoding: 'utf-8' })
+    fs.writeFileSync(codePath, generateCode(hyperdb, { directory: dbDir, esm }), { encoding: 'utf-8' })
   }
 
   static from (schemaJson, dbJson, opts) {

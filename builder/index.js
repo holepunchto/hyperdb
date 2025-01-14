@@ -94,11 +94,14 @@ class Collection extends DBType {
     this.valueEncoding = this._deriveValueSchema().fqn
   }
 
-  _deriveValueSchema (schema = this.schema, prefix = '', primaryKeySet = new Set(this.key)) {
+  _deriveValueSchema (schema = this.schema, prefix = '', primaryKeySet = new Set(this.key), parents = new Set()) {
     const fields = []
     const type = '/hyperdb#' + this.id
 
-    if (!schema.isStruct) return { external: false, fqn: schema.name }
+    if (!schema.isStruct || parents.has(schema)) return { external: false, fqn: schema.name }
+
+    const result = { external: false, fqn: getFQN(schema.namespace, schema.name) }
+    parents.add(schema)
 
     let external = false
 
@@ -108,7 +111,7 @@ class Collection extends DBType {
 
       if (primaryKeySet.has(name)) {
         external = cpy.external = true
-      } else if (this._deriveValueSchema(f.type, name, primaryKeySet).external) {
+      } else if (this._deriveValueSchema(f.type, name, primaryKeySet, new Set([...parents])).external) {
         external = true
       }
 

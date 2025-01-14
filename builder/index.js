@@ -100,7 +100,6 @@ class Collection extends DBType {
 
     if (!schema.isStruct || parents.has(schema)) return { external: false, fqn: schema.name }
 
-    const result = { external: false, fqn: getFQN(schema.namespace, schema.name) }
     parents.add(schema)
 
     let external = false

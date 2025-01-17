@@ -402,3 +402,19 @@ test('nested keys', async function ({ create, bee }, t) {
 
   await db.close()
 })
+
+test('undo mutation without deletion', async function ({ create }, t) {
+  const db = await create()
+
+  await db.insert('@db/members', { id: 'maf', age: 50 })
+  await db.flush()
+
+  await db.insert('@db/members', { id: 'maf', age: 40 })
+  await db.insert('@db/members', { id: 'maf', age: 50 })
+  await db.flush()
+
+  const maf = await db.findOne('@db/members')
+  t.alike(maf, { id: 'maf', age: 50 })
+
+  await db.close()
+})

@@ -475,7 +475,10 @@ class HyperDB {
       prevValue = await this.engineSnapshot.get(key)
       if (collection.trigger !== null) await this._runTrigger(collection, doc, doc)
 
-      if (prevValue !== null && b4a.equals(value, prevValue)) return
+      if (prevValue !== null && b4a.equals(value, prevValue)) {
+        this.updates.delete(key)
+        return
+      }
 
       const prevDoc = prevValue === null ? null : collection.reconstruct(this.version, key, prevValue)
 

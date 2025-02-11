@@ -315,8 +315,8 @@ test('changes', async function ({ create }, t) {
   for await (const op of db.changes()) ops.push(op)
 
   t.alike(ops, [
-    { type: 'insert', seq: 2, collection: '@db/members', value: { id: 'maf', age: 50 } },
-    { type: 'insert', seq: 4, collection: '@db/members', value: { id: 'andrew', age: 40 } }
+    { type: 'insert', seq: 2, collection: '@db/members', value: { id: 'andrew', age: 40 } },
+    { type: 'insert', seq: 4, collection: '@db/members', value: { id: 'maf', age: 50 } }
   ])
 
   await db.delete('@db/members', { id: 'andrew' })
@@ -326,8 +326,8 @@ test('changes', async function ({ create }, t) {
   for await (const op of db.changes()) ops.push(op)
 
   t.alike(ops, [
-    { type: 'insert', seq: 2, collection: '@db/members', value: { id: 'maf', age: 50 } },
-    { type: 'insert', seq: 4, collection: '@db/members', value: { id: 'andrew', age: 40 } },
+    { type: 'insert', seq: 2, collection: '@db/members', value: { id: 'andrew', age: 40 } },
+    { type: 'insert', seq: 4, collection: '@db/members', value: { id: 'maf', age: 50 } },
     { type: 'delete', seq: 6, collection: '@db/members', value: { id: 'andrew' } }
   ])
 
@@ -386,12 +386,12 @@ test('nested keys', async function ({ create, bee }, t) {
       type: 'insert',
       seq: 1,
       collection: '@db/nested-members',
-      value: { member: { id: 'maf', age: 50 }, fun: true }
+      value: { member: { id: 'andrew', age: 40 }, fun: false }
     }, {
       type: 'insert',
       seq: 2,
       collection: '@db/nested-members',
-      value: { member: { id: 'andrew', age: 40 }, fun: false }
+      value: { member: { id: 'maf', age: 50 }, fun: true }
     }, {
       type: 'delete',
       seq: 3,

@@ -130,8 +130,46 @@ class Updates {
     this.map.delete(b4a.toString(key, 'hex'))
   }
 
-  entries () {
-    return this.map.values()
+  batch () {
+    const ordered = new Array(this.map.size)
+
+    let sort = false
+    let i = 0
+
+    for (const u of this.map.values()) {
+      if (i > 0 && u.tick < ordered[i - 1].tick) sort = true
+      ordered[i++] = u
+    }
+
+    if (sort) ordered.sort(sortUpdates)
+
+    const dedup = ordered.length > 1 ? new Set() : null
+    const batch = []
+
+    for (let i = ordered.length - 1; i >= 0; i--) {
+      const u = ordered[i]
+
+      for (let j = 0; j < u.indexes.length; j++) {
+        const idx = u.indexes[j]
+
+        // TODO: we can be more fancy here with only deduping non-unique indexes
+        for (let k = 0; k < idx.length; k++) {
+          const { key, value } = idx[k]
+          if (dedup !== null) {
+            const id = b4a.toString(key, 'hex')
+            if (dedup.has(id)) continue
+            dedup.add(id)
+          }
+
+          batch.push([key, value])
+        }
+      }
+
+      // these keys are guaranteed unique so no dedup is needed
+      batch.push([u.key, u.value])
+    }
+
+    return batch
   }
 
   collectionOverlay (collection, range, reverse) {
@@ -570,6 +608,10 @@ function withinRange (range, key) {
 
 function sortKeys (a, b) {
   return b4a.compare(a, b)
+}
+
+function sortUpdates (a, b) {
+  return a.tick - b.tick // oldest to newest
 }
 
 function compareOverlay (a, b) {

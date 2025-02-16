@@ -16,6 +16,7 @@
   },
   "exports": {
     ".": "./index.js",
+    "./package": "./package.json",
     "./builder": {
       "import": "./builder/index.mjs",
       "default": "./builder/index.js"

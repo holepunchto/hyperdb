@@ -205,7 +205,7 @@ test('delete from memview', async function ({ create }, t) {
   await db.close()
 })
 
-test('watch', async function ({ create }, t) {
+test.bee.solo('watch', async function ({ create }, t) {
   t.plan(4)
 
   const db = await create()

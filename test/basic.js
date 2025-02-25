@@ -243,6 +243,7 @@ test.bee.solo('watch', async function ({ create }, t) {
   t.ok(changed)
 
   await db.close()
+  await new Promise(r => setTimeout(r, 1000))
 })
 
 test('basic reopen', async function ({ create }, t) {

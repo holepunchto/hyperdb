@@ -205,7 +205,7 @@ test('delete from memview', async function ({ create }, t) {
   await db.close()
 })
 
-test.bee.solo('watch', async function ({ create }, t) {
+test('watch', async function ({ create }, t) {
   t.plan(4)
 
   const db = await create()
@@ -243,6 +243,7 @@ test.bee.solo('watch', async function ({ create }, t) {
   t.ok(changed)
 
   await db.close()
+  // hack due to hc releasing something slowly, fix there
   await new Promise(resolve => setTimeout(resolve, 1000))
 })
 

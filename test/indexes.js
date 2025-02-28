@@ -156,7 +156,7 @@ test('delete on an index', async function ({ build }, t) {
   await db.close()
 })
 
-test.solo('non-unique index is updated correctly with a previous delete in the transaction', async function ({ build }, t) {
+test.solo('unique index is updated correctly with a previous delete in the transaction', async function ({ build }, t) {
   const db = await build(createExampleDB)
 
   await db.insert('@example/members-with-nicknames', { name: 'one', nickname: 'nn-one' })

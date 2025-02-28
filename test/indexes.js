@@ -156,6 +156,28 @@ test('delete on an index', async function ({ build }, t) {
   await db.close()
 })
 
+test.solo('non-unique index is updated correctly with a previous delete in the transaction', async function ({ build }, t) {
+  const db = await build(createExampleDB)
+
+  await db.insert('@example/members-with-nicknames', { name: 'one', nickname: 'nn-one' })
+  await db.insert('@example/members-with-nicknames', { name: 'two', nickname: 'nn-two' })
+
+  {
+    const doc = await db.get('@example/members-by-nickname', { nickname: 'nn-one' })
+    t.is(doc.name, 'one')
+  }
+
+  const tx = db.transaction()
+  await tx.delete('@example/members-with-nicknames', { name: 'one' })
+  await tx.insert('@example/members-with-nicknames', { name: 'two', nickname: 'nn-one' })
+  await tx.flush()
+
+  {
+    const doc = await db.get('@example/members-by-nickname', { nickname: 'nn-one' })
+    t.is(doc.name, 'two')
+  }
+})
+
 function createExampleDB (HyperDB, Hyperschema, paths) {
   const schema = Hyperschema.from(paths.schema)
   const example = schema.namespace('example')
@@ -191,6 +213,22 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
     ]
   })
 
+  example.register({
+    name: 'member-with-nickname',
+    fields: [
+      {
+        name: 'name',
+        type: 'string',
+        required: true
+      },
+      {
+        name: 'nickname',
+        type: 'string',
+        required: true
+      }
+    ]
+  })
+
   Hyperschema.toDisk(schema)
 
   const db = HyperDB.from(paths.schema, paths.db)
@@ -210,6 +248,12 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
     key: ['name']
   })
 
+  exampleDB.collections.register({
+    name: 'members-with-nicknames',
+    schema: '@example/member-with-nickname',
+    key: ['name']
+  })
+
   exampleDB.indexes.register({
     name: 'members-by-name',
     collection: '@example/members',
@@ -218,6 +262,13 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
       type: 'string',
       map: 'mapNameToLowerCase'
     }
+  })
+
+  exampleDB.indexes.register({
+    name: 'members-by-nickname',
+    collection: '@example/members-with-nicknames',
+    unique: true,
+    key: ['nickname']
   })
 
   exampleDB.indexes.register({

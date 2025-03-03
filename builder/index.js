@@ -267,7 +267,7 @@ class BuilderNamespace {
 }
 
 class Builder {
-  constructor (dbJson, { offset = 0, dbDir = null, schemaDir = null } = {}) {
+  constructor (dbJson, { offset = 0, dbDir = null } = {}) {
     this.version = dbJson ? dbJson.version : 0
     this.offset = dbJson ? dbJson.offset : offset
     this.dbDir = dbDir

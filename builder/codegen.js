@@ -75,11 +75,11 @@ module.exports = function generateCode (hyperdb, { directory = '.', esm = false 
 
   if (esm) {
     str += `import { IndexEncoder, c } from '${pkg.name}/runtime'\n`
-    str += `import { version, getEncoding, setVersion } from '${messagesPath}'\n`
+    str += `import { version, getEncoding, setVersion } from ${s(messagesPath)}\n`
     str += '\n'
   } else {
     str += `const { IndexEncoder, c } = require('${pkg.name}/runtime')\n`
-    str += `const { version, getEncoding, setVersion } = require('${messagesPath}')\n`
+    str += `const { version, getEncoding, setVersion } = require(${s(messagesPath)})\n`
     str += '\n'
   }
 
@@ -89,9 +89,9 @@ module.exports = function generateCode (hyperdb, { directory = '.', esm = false 
     addedHelper = true
     const helpers = p.relative(p.resolve(directory), ns.helpers).replaceAll('\\', '/')
     if (esm) {
-      str += `import * as helpers${ns.id} from '${helpers}'\n`
+      str += `import * as helpers${ns.id} from ${s(helpers)}\n`
     } else {
-      str += `const helpers${ns.id} = require('${helpers}')\n`
+      str += `const helpers${ns.id} = require(${s(helpers)})\n`
     }
   }
   if (addedHelper) str += '\n'

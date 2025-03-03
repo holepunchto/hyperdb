@@ -1,6 +1,5 @@
 const p = require('path')
 const fs = require('fs')
-const Hyperschema = require('hyperschema')
 
 const generateCode = require('./codegen')
 
@@ -9,7 +8,6 @@ const INDEX_TYPE = 2
 
 const DB_JSON_FILE_NAME = 'db.json'
 const CODE_FILE_NAME = 'index.js'
-const MESSAGES_FILE_NAME = 'messages.js'
 
 class DBType {
   constructor (builder, namespace, description) {
@@ -269,12 +267,10 @@ class BuilderNamespace {
 }
 
 class Builder {
-  constructor (schema, dbJson, { offset = 0, dbDir = null, schemaDir = null } = {}) {
-    this.schema = schema
+  constructor (dbJson, { offset = 0, dbDir = null, schemaDir = null } = {}) {
     this.version = dbJson ? dbJson.version : 0
     this.offset = dbJson ? dbJson.offset : offset
     this.dbDir = dbDir
-    this.schemaDir = schemaDir
 
     this.namespaces = new Map()
     this.typesByName = new Map()
@@ -311,6 +307,8 @@ class Builder {
   }
 
   registerCollection (description, namespace) {
+    if (!this.schema) throw new Error('registerSchema must be called with a Hyperschema instance before registering collections')
+
     const fqn = getFQN(namespace, description.name)
     // TODO: also validate this for invalid mutations if it was hydrated from JSON
     if (this.typesByName.has(fqn)) return
@@ -322,6 +320,8 @@ class Builder {
   }
 
   registerIndex (description, namespace) {
+    if (!this.schema) throw new Error('registerSchema must be called with a Hyperschema instance before registering collections')
+
     const fqn = getFQN(namespace, description.name)
     // TODO: also validate this for invalid mutations if it was hydrated from JSON
     if (this.typesByName.has(fqn)) return
@@ -337,6 +337,11 @@ class Builder {
     const ns = new BuilderNamespace(this, name, opts)
     this.namespaces.set(name, ns)
     return ns
+  }
+
+  registerSchema (schema) {
+    if (this.schema) throw new Error('Already registered a hyperschema instance')
+    this.schema = schema
   }
 
   toJSON () {
@@ -357,17 +362,14 @@ class Builder {
 
     const { esm = this.esm } = opts
 
-    const messagesPath = p.join(p.resolve(dbDir), MESSAGES_FILE_NAME)
     const dbJsonPath = p.join(p.resolve(dbDir), DB_JSON_FILE_NAME)
     const codePath = p.join(p.resolve(dbDir), CODE_FILE_NAME)
 
-    fs.writeFileSync(messagesPath, hyperdb.schema.toCode({ esm }), { encoding: 'utf-8' })
     fs.writeFileSync(dbJsonPath, JSON.stringify(hyperdb.toJSON(), null, 2), { encoding: 'utf-8' })
     fs.writeFileSync(codePath, generateCode(hyperdb, { directory: dbDir, esm }), { encoding: 'utf-8' })
   }
 
-  static from (schemaJson, dbJson, opts) {
-    const schema = Hyperschema.from(schemaJson)
+  static from (dbJson, opts) {
     if (typeof dbJson === 'string') {
       const jsonFilePath = p.join(p.resolve(dbJson), DB_JSON_FILE_NAME)
       let exists = false
@@ -377,11 +379,11 @@ class Builder {
       } catch (err) {
         if (err.code !== 'ENOENT') throw err
       }
-      opts = { ...opts, dbDir: dbJson, schemaDir: schemaJson }
-      if (exists) return new this(schema, JSON.parse(fs.readFileSync(jsonFilePath)), opts)
-      return new this(schema, null, opts)
+      opts = { ...opts, dbDir: dbJson }
+      if (exists) return new this(JSON.parse(fs.readFileSync(jsonFilePath)), opts)
+      return new this(null, opts)
     }
-    return new this(schema, dbJson, opts)
+    return new this(dbJson, opts)
   }
 }
 

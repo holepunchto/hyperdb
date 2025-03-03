@@ -72,11 +72,11 @@ module.exports = function generateCode (hyperdb, { directory = '.', esm = false 
   str += '\n'
   if (esm) {
     str += `import { IndexEncoder, c } from '${pkg.name}/runtime'\n`
-    str += 'import { version, getEncoding, setVersion } from \'./messages.js\'\n'
+    str += `import { version, getEncoding, setVersion } from '${hyperdb.schema.dir}'\n`
     str += '\n'
   } else {
     str += `const { IndexEncoder, c } = require('${pkg.name}/runtime')\n`
-    str += 'const { version, getEncoding, setVersion } = require(\'./messages.js\')\n'
+    str += `const { version, getEncoding, setVersion } = require('${hyperdb.schema.dir}')\n`
     str += '\n'
   }
 

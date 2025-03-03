@@ -95,9 +95,9 @@ example.register({
 })
 
 const db = HyperDB.from(DB_DIR)
-const exampleDb = db.namespace('example')
+db.registerSchema(schema)
 
-exampleDb.registerSchema(schema)
+const exampleDb = db.namespace('example')
 exampleDb.require('./helpers.js')
 
 exampleDb.collections.register({

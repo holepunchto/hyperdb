@@ -457,8 +457,8 @@ class HyperDB {
   }
 
   // TODO: needs to wait for pending inserts/deletes and then lock all future ones whilst it runs
-  _runTrigger (collection, key, doc) {
-    return collection.trigger(this, key, doc, this.context)
+  _runTrigger (collection, key, isDelete) {
+    return collection.trigger(this, key, isDelete, this.context)
   }
 
   async delete (collectionName, doc) {
@@ -478,7 +478,7 @@ class HyperDB {
 
     try {
       prevValue = await this.engineSnapshot.get(key)
-      if (collection.trigger !== null) await this._runTrigger(collection, doc, null)
+      if (collection.trigger !== null) await this._runTrigger(collection, doc, true)
 
       if (prevValue === null) {
         this.updates.delete(key)
@@ -522,7 +522,7 @@ class HyperDB {
 
     try {
       prevValue = await this.engineSnapshot.get(key)
-      if (collection.trigger !== null) await this._runTrigger(collection, doc, doc)
+      if (collection.trigger !== null) await this._runTrigger(collection, doc, false)
 
       if (prevValue !== null && b4a.equals(value, prevValue)) {
         this.updates.delete(key)

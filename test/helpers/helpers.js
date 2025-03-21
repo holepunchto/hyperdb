@@ -8,15 +8,13 @@ exports.mapNameToLowerCase = (record, context) => {
   return name ? [name] : []
 }
 
-exports.triggerCountMembers = async (db, key, record) => {
+exports.triggerCountMembers = async (db, key, isDelete, context) => {
   const digest = (await db.get('@example/digest')) || { count: 0 }
 
-  const prev = !!(await db.get('@example/members', key))
-  const next = !!record
+  const existing = await db.get('@example/members', key)
+  if (existing && !isDelete) return
 
-  if (prev === next) return
-
-  digest.count += next ? 1 : -1
+  digest.count += isDelete ? -1 : 1
 
   await db.insert('@example/digest', digest)
 }

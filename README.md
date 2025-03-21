@@ -123,7 +123,7 @@ Close the database. You have to close any snapshots you use also.
 
 ## Builder API
 
-See [example](./builder/example.js).
+See [example](./builder/example/example.js).
 
 Each field in the builder file is an object:
 ```

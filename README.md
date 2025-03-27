@@ -32,9 +32,27 @@ It is that simple.
 
 Make a db backed by Hyperbee. P2P!
 
+Available `options`:
+
+```
+{
+  autoUpdate: false, // Whether the database should update when the underlying hyperbee does
+  writable: true // Whether the database is writable
+}
+```
+
 #### `db = Hyperdb.rocks(path, definition, [options])`
 
 Make a db backed by RocksDB. Local only!
+
+Available `options`:
+
+```
+{
+  readOnly: false, // Whether the database be read-only
+  writable: true // Whether the database is writable
+}
+```
 
 #### `queryStream = db.find(collectionOrIndex, query, [options])`
 
@@ -56,7 +74,7 @@ And options include
 ```js
 {
   limit, // how many max?
-  reverse // reverse stream?
+  reverse: false // reverse stream?
 }
 ```
 
@@ -81,11 +99,7 @@ Alias for `await find(...).one()`
 
 #### `doc = await db.get(collection, query)`
 
-Get a document from a collection
-
-#### `{ count } = await db.stats(collectionOrIndex)`
-
-Get stats, about a collection or index with stats enabled.
+Get a document from a collection that matches the `query`. The `query` object will be converted into a key to check against the `collection`.
 
 #### `await db.insert(collection, doc)`
 
@@ -93,16 +107,42 @@ Insert a document into a collection. NOTE: you have to flush the db later for th
 
 #### `await db.delete(collection, query)`
 
-Delete a document from a collection. NOTE: you have to flush the db later for this to be persisted.
+Delete a document from a collection matching the query. NOTE: you have to flush the db later for this to be persisted.
 
 #### `bool = db.updated([collection], [query])`
 
 Returns a boolean indicating if this database was updated. Pass a collection and doc query to know if
 a specific record was updated.
 
+#### `const stream = db.changes(range = {})`
+
+Returns a stream of changes to the database. The `range` can have the
+following properties:
+
+```
+{
+  gte: seq, // Start with this seq (inclusive)
+  gt: seq, // Start after this index
+  lte: seq, // Stop after this index
+  lt: seq, // Stop before this index
+}
+```
+
+`seq` is the sequence number for the underlying Hyperbee node.
+
+Only supported with Hyperbee engine.
+
 #### `await db.flush()`
 
 Flush all changes to the db
+
+#### `db.watch(cb)`
+
+Register a callback to trigger when database updates.
+
+#### `db.unwatch(cb)`
+
+Remove watch callback.
 
 #### `db.reload()`
 
@@ -117,9 +157,25 @@ Make a readonly snapshot of the database. All reads/streams are locked in time o
 Make a writable snapshot of the database. All reads/streams are locked in time on a snapshot from the time you call the snapshot method.
 When you flush this one, it updates the main instance also.
 
+#### `await db.ready()`
+
+Wait for the database to fully open.
+
 #### `await db.close()`
 
 Close the database. You have to close any snapshots you use also.
+
+#### `db.closed`
+
+Whether the database has been closed.
+
+#### `db.writable`
+
+Whether the database can be written to.
+
+#### `db.readable`
+
+Whether the database can be read.
 
 ## Builder API
 

@@ -12,6 +12,7 @@ First generate your definition with the builder.
 The definition defines the schemas and collections you wanna use.
 
 ```js
+// build.js
 const Hyperschema = require('hyperschema')
 const HyperDB = require('hyperdb/builder')
 
@@ -39,22 +40,6 @@ example.register({
     },
   ]
 })
-
-// Define 'devices'
-example.register({
-  name: 'devices',
-  fields: [
-    {
-      name: 'key',
-      type: 'string',
-      required: true,
-    },
-    {
-      name: 'name',
-      type: 'string',
-    },
-  ]
-})
 Hyperschema.toDisk(schema)
 
 // Hyperdb collection definitions
@@ -66,17 +51,12 @@ exampleDB.require('./helpers.js')
 
 // Define collections of structs
 exampleDB.collections.register({
-  name: 'devices',
-  schema: '@example/devices',
-  key: ['key']
-})
-
-exampleDB.collections.register({
   name: 'members',
   schema: '@example/members',
   key: ['name']
 })
 
+// Define index over collection
 exampleDB.indexes.register({
   name: 'members-by-name',
   collection: '@example/members',
@@ -87,49 +67,41 @@ exampleDB.indexes.register({
   }
 })
 
-exampleDB.indexes.register({
-  name: 'teenagers',
-  collection: '@example/members',
-  key: {
-    type: 'uint',
-    map: 'mapTeenager',
-  }
-})
-
-exampleDB.indexes.register({
-  name: 'last-teenager',
-  collection: '@example/members',
-  unique: true,
-  key: {
-    type: 'uint',
-    map: 'mapTeenager',
-  }
-})
-
 HyperDB.toDisk(db)
 ```
 
 Define helper functions in `helper.js`:
 
 ```js
-exports.mapTeenager = (record, context) => {
-  if (record.age < 13 || record.age > 19) return []
-  return [record.age]
-}
-
+// helper.js
 exports.mapNameToLowerCase = (record, context) => {
   const name = record.name.toLowerCase().trim()
   return name ? [name] : []
 }
 ```
 
+Run `node build.js` to build the spec.
+
 Then boot your db. You can use the same definition for a fully local db and a P2P one.
 
 ``` js
+// run.js
 const HyperDB = require('hyperdb')
 
-// first choose your engine
-const db = HyperDB.rocks('./my-rocks.db', require('./spec/hyperdb/index.js'))
+;(async () => {
+  // first choose your engine
+  const db = HyperDB.rocks('./my-rocks.db', require('./spec/hyperdb/index.js'))
+
+  // Add some entries
+  await db.insert('@example/members', { name: 'maf', age: 37 })
+  await db.insert('@example/members', { name: 'sean', age: 36 })
+  await db.flush() // commit changes
+
+  // Query collection
+  const maf = await db.findOne('@example/members', { name: 'maf' })
+  console.log('maf', maf)
+})()
+
 ```
 
 It is that simple.

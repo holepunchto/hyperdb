@@ -12,7 +12,115 @@ First generate your definition with the builder.
 The definition defines the schemas and collections you wanna use.
 
 ```js
-// TODO (see ./example here for now)
+const Hyperschema = require('hyperschema')
+const HyperDB = require('hyperdb/builder')
+
+const SCHEMA_DIR = './spec/hyperschema' // where the schema definitions are written
+const DB_DIR = './spec/hyperdb' // Where to install db definition
+
+// Hyperschema definitions
+const schema = Hyperschema.from(SCHEMA_DIR)
+const example = schema.namespace('example')
+
+// Define 'members'
+example.register({
+  name: 'members',
+  compact: true,
+  fields: [
+    {
+      name: 'name',
+      type: 'string',
+      required: true,
+    },
+    {
+      name: 'age',
+      type: 'uint',
+      required: true,
+    },
+  ]
+})
+
+// Define 'devices'
+example.register({
+  name: 'devices',
+  fields: [
+    {
+      name: 'key',
+      type: 'string',
+      required: true,
+    },
+    {
+      name: 'name',
+      type: 'string',
+    },
+  ]
+})
+Hyperschema.toDisk(schema)
+
+// Hyperdb collection definitions
+const db = HyperDB.from(SCHEMA_DIR, DB_DIR)
+const exampleDB = db.namespace('example')
+
+// Import helpers (see next step)
+exampleDB.require('./helpers.js')
+
+// Define collections of structs
+exampleDB.collections.register({
+  name: 'devices',
+  schema: '@example/devices',
+  key: ['key']
+})
+
+exampleDB.collections.register({
+  name: 'members',
+  schema: '@example/members',
+  key: ['name']
+})
+
+exampleDB.indexes.register({
+  name: 'members-by-name',
+  collection: '@example/members',
+  unique: true,
+  key: {
+    type: 'string',
+    map: 'mapNameToLowerCase',
+  }
+})
+
+exampleDB.indexes.register({
+  name: 'teenagers',
+  collection: '@example/members',
+  key: {
+    type: 'uint',
+    map: 'mapTeenager',
+  }
+})
+
+exampleDB.indexes.register({
+  name: 'last-teenager',
+  collection: '@example/members',
+  unique: true,
+  key: {
+    type: 'uint',
+    map: 'mapTeenager',
+  }
+})
+
+HyperDB.toDisk(db)
+```
+
+Define helper functions in `helper.js`:
+
+```js
+exports.mapTeenager = (record, context) => {
+  if (record.age < 13 || record.age > 19) return []
+  return [record.age]
+}
+
+exports.mapNameToLowerCase = (record, context) => {
+  const name = record.name.toLowerCase().trim()
+  return name ? [name] : []
+}
 ```
 
 Then boot your db. You can use the same definition for a fully local db and a P2P one.
@@ -21,7 +129,7 @@ Then boot your db. You can use the same definition for a fully local db and a P2
 const HyperDB = require('hyperdb')
 
 // first choose your engine
-const db = HyperDB.rocks('./my-rocks.db', require('./my-definition'))
+const db = HyperDB.rocks('./my-rocks.db', require('./spec/hyperdb/index.js'))
 ```
 
 It is that simple.

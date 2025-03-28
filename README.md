@@ -119,6 +119,8 @@ Available `options`:
 }
 ```
 
+For Hyperbee backed databases, the database does not update it's state when the bee updates. Setting `autoUpdate` to `true` makes this automatic. Otherwise the database can be manually updated with `db.update()`.
+
 #### `db = Hyperdb.rocks(path, definition, [options])`
 
 Make a db backed by RocksDB. Local only!

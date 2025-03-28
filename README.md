@@ -85,23 +85,21 @@ Run `node build.js` to build the spec.
 Then boot your db. You can use the same definition for a fully local db and a P2P one.
 
 ``` js
-// run.js
-const HyperDB = require('hyperdb')
+// run.mjs
+import HyperDB from 'hyperdb'
+import def from './spec/hyperdb/index.js'
 
-;(async () => {
-  // first choose your engine
-  const db = HyperDB.rocks('./my-rocks.db', require('./spec/hyperdb/index.js'))
+// first choose your engine
+const db = HyperDB.rocks('./my-rocks.db', def)
 
-  // Add some entries
-  await db.insert('@example/members', { name: 'maf', age: 37 })
-  await db.insert('@example/members', { name: 'sean', age: 36 })
-  await db.flush() // commit changes
+// Add some entries
+await db.insert('@example/members', { name: 'maf', age: 37 })
+await db.insert('@example/members', { name: 'sean', age: 36 })
+await db.flush() // commit changes
 
-  // Query collection
-  const maf = await db.findOne('@example/members', { name: 'maf' })
-  console.log('maf', maf)
-})()
-
+// Query collection
+const maf = await db.findOne('@example/members', { name: 'maf' })
+console.log('maf', maf)
 ```
 
 It is that simple.

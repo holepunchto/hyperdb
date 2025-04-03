@@ -380,6 +380,7 @@ class HyperDB {
 
     if (collection === null) throw new Error('Unknown index: ' + indexName)
 
+    const checkout = query.checkout || 0
     const limit = query.limit
     const reverse = !!query.reverse
 
@@ -387,16 +388,19 @@ class HyperDB {
       ? collection.encodeKeyRange(query)
       : index.encodeKeyRange(query)
 
-    const overlay = index === null
-      ? this.updates.collectionOverlay(collection, range, reverse)
-      : this.updates.indexOverlay(index, range, reverse)
+    const overlay = checkout !== 0
+      ? []
+      : index === null
+        ? this.updates.collectionOverlay(collection, range, reverse)
+        : this.updates.indexOverlay(index, range, reverse)
 
     return new IndexStream(this, range, {
       index,
       collection,
       reverse,
       limit,
-      overlay
+      overlay,
+      checkout
     })
   }
 
@@ -416,14 +420,14 @@ class HyperDB {
     return u !== null
   }
 
-  async get (collectionName, doc) {
+  async get (collectionName, doc, { checkout = 0 } = {}) {
     maybeClosed(this)
 
     const snap = this.engineSnapshot.ref()
 
     try {
       const collection = this.definition.resolveCollection(collectionName)
-      if (collection !== null) return await this._getCollection(collection, snap, doc)
+      if (collection !== null) return await this._getCollection(collection, snap, doc, checkout)
 
       const index = this.definition.resolveIndex(collectionName)
       if (index === null) throw new Error('Unknown index or collection: ' + collectionName)
@@ -432,18 +436,18 @@ class HyperDB {
       if (key === null) return null
 
       const u = this.updates.getIndex(index, key)
-      if (u !== null) return u.value === null ? null : index.collection.reconstruct(this.version, u.key, u.value)
+      if (u !== null && checkout === 0) return u.value === null ? null : index.collection.reconstruct(this.version, u.key, u.value)
 
-      const value = await snap.get(key)
+      const value = await snap.get(key, checkout)
       if (value === null) return null
 
-      return this._getCollection(index.collection, snap, index.reconstruct(key, value))
+      return this._getCollection(index.collection, snap, index.reconstruct(key, value), checkout)
     } finally {
       if (snap !== null) snap.unref()
     }
   }
 
-  async _getCollection (collection, snap, doc) {
+  async _getCollection (collection, snap, doc, checkout) {
     maybeClosed(this)
 
     // we allow passing the raw primary key here cause thats what the trigger passes for simplicity
@@ -451,7 +455,7 @@ class HyperDB {
     const key = b4a.isBuffer(doc) ? doc : collection.encodeKey(doc)
 
     const u = this.updates.get(key)
-    const value = u !== null ? u.value : await snap.get(key)
+    const value = (u !== null && checkout === 0) ? u.value : await snap.get(key, checkout)
 
     return value === null ? null : collection.reconstruct(this.version, key, value)
   }

@@ -41,7 +41,7 @@
     "compact-encoding": "^2.15.0",
     "generate-object-property": "^2.0.0",
     "generate-string": "^1.0.1",
-    "hyperbee": "^2.20.4",
+    "hyperbee": "^2.24.1",
     "hyperschema": "^1.9.2",
     "index-encoder": "^3.2.0",
     "refcounter": "^1.0.0",

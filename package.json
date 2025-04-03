@@ -44,6 +44,7 @@
     "hyperbee": "^2.20.4",
     "hyperschema": "^1.9.2",
     "index-encoder": "^3.2.0",
+    "refcounter": "^1.0.0",
     "rocksdb-native": "^3.0.0",
     "streamx": "^2.20.0"
   },

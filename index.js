@@ -4,6 +4,7 @@ const b4a = require('b4a')
 // engines
 const RocksEngine = require('./lib/engine/rocks')
 const BeeEngine = require('./lib/engine/bee')
+const HyperDBExtension = require('./lib/extension')
 
 let compareHasDups = false
 
@@ -224,7 +225,8 @@ class HyperDB {
     updates = new Updates(0, []),
     rootInstance = null,
     writable = true,
-    context = null
+    context = null,
+    extension = null
   } = {}) {
     this.version = version
     this.context = context
@@ -235,6 +237,8 @@ class HyperDB {
     this.rootInstance = writable === true ? (rootInstance || this) : null
     this.watchers = null
     this.closing = null
+
+    this.extension = extension !== false ? extension || HyperDBExtension.register(this) : null
 
     engine.refs++
   }
@@ -249,10 +253,9 @@ class HyperDB {
   }
 
   static bee (core, definition, options = {}) {
-    const extension = options.extension
     const autoUpdate = !!options.autoUpdate
 
-    const db = new HyperDB(new BeeEngine(core, { extension }), definition, options)
+    const db = new HyperDB(new BeeEngine(core, { extension: false }), definition, options)
 
     if (autoUpdate) {
       const update = db.update.bind(db)
@@ -382,13 +385,17 @@ class HyperDB {
 
     const {
       checkout = -1,
-      limit,
+      limit = -1,
       reverse = false
     } = query
 
-    const range = index === null
-      ? collection.encodeKeyRange(query)
-      : index.encodeKeyRange(query)
+    // encoded flag comes from lib/extension.js
+    const range = options?.encoded ? query : encodeQuery(query)
+    function encodeQuery (query) {
+      return index === null
+        ? collection.encodeKeyRange(query)
+        : index.encodeKeyRange(query)
+    }
 
     const overlay = checkout !== -1
       ? []
@@ -396,13 +403,26 @@ class HyperDB {
         ? this.updates.collectionOverlay(collection, range, reverse)
         : this.updates.indexOverlay(index, range, reverse)
 
+    let completed = false
+    const extension = this.extension && options?.extension !== false ? this.extension : false
+    const onwait = extension && function (_, core) {
+      if (!extension || completed) return
+      extension.get(core.length, indexName, { ...range, limit, reverse })
+      completed = true
+    }
+
     return new IndexStream(this, range, {
       index,
       collection,
       reverse,
       limit,
       overlay,
-      checkout
+      checkout,
+      onwait,
+      wait: options?.wait,
+      udpdate: options?.udpdate,
+      onseq: options?.onseq,
+      extension
     })
   }
 
@@ -422,34 +442,39 @@ class HyperDB {
     return u !== null
   }
 
-  async get (collectionName, doc, { checkout = -1 } = {}) {
+  async get (collectionName, doc, opts = {}) {
     maybeClosed(this)
+
+    const checkout = opts.checkout || -1
+    if (this.extension && opts.extension !== false) opts.extension = this.extension
 
     const snap = this.engineSnapshot.ref()
 
     try {
       const collection = this.definition.resolveCollection(collectionName)
-      if (collection !== null) return await this._getCollection(collection, snap, doc, checkout)
+      if (collection !== null) return await this._getCollection(collection, snap, doc, checkout, { ...opts, collectionName: collection.name })
 
       const index = this.definition.resolveIndex(collectionName)
       if (index === null) throw new Error('Unknown index or collection: ' + collectionName)
 
-      const key = index.encodeKey(doc, this.context)
+      // doc is a buf when it comes from lib/extension.js
+      const key = b4a.isBuffer(doc) ? doc : index.encodeKey(doc, this.context)
       if (key === null) return null
 
       const u = this.updates.getIndex(index, key)
       if (u !== null && checkout === -1) return u.value === null ? null : index.collection.reconstruct(this.version, u.key, u.value)
 
-      const value = await snap.get(key, checkout)
+      opts.collectionName = index.name
+      const value = await snap.get(key, checkout, opts)
       if (value === null) return null
 
-      return this._getCollection(index.collection, snap, index.reconstruct(key, value), checkout)
+      return this._getCollection(index.collection, snap, index.reconstruct(key, value), checkout, opts)
     } finally {
       if (snap !== null) snap.unref()
     }
   }
 
-  async _getCollection (collection, snap, doc, checkout) {
+  async _getCollection (collection, snap, doc, checkout, opts = {}) {
     maybeClosed(this)
 
     // we allow passing the raw primary key here cause thats what the trigger passes for simplicity
@@ -457,7 +482,7 @@ class HyperDB {
     const key = b4a.isBuffer(doc) ? doc : collection.encodeKey(doc)
 
     const u = this.updates.get(key)
-    const value = (u !== null && checkout === -1) ? u.value : await snap.get(key, checkout)
+    const value = (u !== null && checkout === -1) ? u.value : await snap.get(key, checkout, opts)
 
     return value === null ? null : collection.reconstruct(this.version, key, value)
   }

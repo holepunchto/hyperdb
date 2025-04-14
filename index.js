@@ -420,7 +420,7 @@ class HyperDB {
       checkout,
       onwait,
       wait: options?.wait,
-      udpdate: options?.udpdate,
+      update: options?.update,
       onseq: options?.onseq,
       extension
     })

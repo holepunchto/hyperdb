@@ -238,7 +238,7 @@ class HyperDB {
     this.watchers = null
     this.closing = null
 
-    this.extension = extension !== false ? extension || HyperDBExtension.register(this) : null
+    this.extension = extension !== false ? extension || HyperDBExtension.register(this) : false
 
     engine.refs++
   }

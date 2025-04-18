@@ -36,4 +36,10 @@ testDb.collections.register({
   key: ['id']
 })
 
+testDb.indexes.register({
+  name: 'members-by-present',
+  collection: '@db/members',
+  key: ['present']
+})
+
 HyperDB.toDisk(db)

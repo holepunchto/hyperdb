@@ -59,11 +59,57 @@ const collection0 = {
   indexes: []
 }
 
+// '@db/members-by-present' collection key
+const index1_key = new IndexEncoder([
+  undefined,
+  IndexEncoder.STRING
+], { prefix: 1 })
+
+function index1_indexify (record) {
+  const arr = []
+
+  const a0 = record.present
+  if (a0 === undefined) return arr
+  arr.push(a0)
+
+  const a1 = record.id
+  if (a1 === undefined) return arr
+  arr.push(a1)
+
+  return arr
+}
+
+// '@db/members-by-present'
+const index1 = {
+  name: '@db/members-by-present',
+  id: 1,
+  encodeKey (record) {
+    return index1_key.encode(index1_indexify(record))
+  },
+  encodeKeyRange ({ gt, lt, gte, lte } = {}) {
+    return index1_key.encodeRange({
+      gt: gt ? index1_indexify(gt) : null,
+      lt: lt ? index1_indexify(lt) : null,
+      gte: gte ? index1_indexify(gte) : null,
+      lte: lte ? index1_indexify(lte) : null
+    })
+  },
+  encodeValue: (doc) => index1.collection.encodeKey(doc),
+  encodeIndexKeys (record, context) {
+    return [index1_key.encode([record.present, record.id])]
+  },
+  reconstruct: (keyBuf, valueBuf) => valueBuf,
+  offset: collection0.indexes.length,
+  collection: collection0
+}
+collection0.indexes.push(index1)
+
 const collections = [
   collection0
 ]
 
 const indexes = [
+  index1
 ]
 
 module.exports = { version, collections, indexes, resolveCollection, resolveIndex }
@@ -77,6 +123,7 @@ function resolveCollection (name) {
 
 function resolveIndex (name) {
   switch (name) {
+    case '@db/members-by-present': return index1
     default: return null
   }
 }

@@ -420,3 +420,27 @@ test('undo mutation without deletion', async function ({ create }, t) {
 
   await db.close()
 })
+
+test.solo('basic example with booleans', async function ({ create }, t) {
+  const db = await create({ fixture: 5 })
+
+  await db.insert('@db/members', { id: 'maf', present: true })
+  await db.insert('@db/members', { id: 'andrew', present: false })
+  await db.flush()
+
+  {
+    const result = await db.find('@db/members', { gte: { present: true }, lte: { present: true } }).toArray()
+    t.alike(result, [
+      { id: 'maf', present: true }
+    ])
+  }
+
+  {
+    const result = await db.find('@db/members', { gte: { present: false }, lte: { present: false } }).toArray()
+    t.alike(result, [
+      { id: 'andrew', present: false }
+    ])
+  }
+
+  await db.close()
+})

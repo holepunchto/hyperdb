@@ -421,7 +421,7 @@ test('undo mutation without deletion', async function ({ create }, t) {
   await db.close()
 })
 
-test.solo('basic example with booleans', async function ({ create }, t) {
+test('basic example with booleans', async function ({ create }, t) {
   const db = await create({ fixture: 5 })
 
   await db.insert('@db/members', { id: 'maf', present: true })

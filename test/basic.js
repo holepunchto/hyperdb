@@ -429,14 +429,14 @@ test.solo('basic example with booleans', async function ({ create }, t) {
   await db.flush()
 
   {
-    const result = await db.find('@db/members', { gte: { present: true }, lte: { present: true } }).toArray()
+    const result = await db.find('@db/members-by-present', { gte: { present: true }, lte: { present: true } }).toArray()
     t.alike(result, [
       { id: 'maf', present: true }
     ])
   }
 
   {
-    const result = await db.find('@db/members', { gte: { present: false }, lte: { present: false } }).toArray()
+    const result = await db.find('@db/members-by-present', { gte: { present: false }, lte: { present: false } }).toArray()
     t.alike(result, [
       { id: 'andrew', present: false }
     ])

@@ -61,7 +61,7 @@ const collection0 = {
 
 // '@db/members-by-present' collection key
 const index1_key = new IndexEncoder([
-  undefined,
+  IndexEncoder.BOOL,
   IndexEncoder.STRING
 ], { prefix: 1 })
 

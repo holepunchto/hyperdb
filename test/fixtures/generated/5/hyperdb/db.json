@@ -1,0 +1,32 @@
+{
+  "version": 0,
+  "offset": 0,
+  "schema": [
+    {
+      "name": "members",
+      "namespace": "db",
+      "id": 0,
+      "type": 1,
+      "indexes": [
+        "@db/members-by-present"
+      ],
+      "schema": "@db/member",
+      "derived": false,
+      "key": [
+        "id"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "members-by-present",
+      "namespace": "db",
+      "id": 1,
+      "type": 2,
+      "collection": "@db/members",
+      "unique": false,
+      "key": [
+        "present"
+      ]
+    }
+  ]
+}

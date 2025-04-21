@@ -45,7 +45,8 @@ const IndexTypeMap = new Map([
   ['base64', 'IndexEncoder.STRING'],
   ['fixed32', 'IndexEncoder.BUFFER'],
   ['fixed64', 'IndexEncoder.BUFFER'],
-  ['buffer', 'IndexEncoder.BUFFER']
+  ['buffer', 'IndexEncoder.BUFFER'],
+  ['bool', 'IndexEncoder.BOOL']
 ])
 
 const Falsies = new Map([

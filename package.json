@@ -43,7 +43,7 @@
     "generate-string": "^1.0.1",
     "hyperbee": "^2.24.2",
     "hyperschema": "^1.9.2",
-    "index-encoder": "^3.2.0",
+    "index-encoder": "^3.4.0",
     "refcounter": "^1.0.0",
     "rocksdb-native": "^3.0.0",
     "streamx": "^2.20.0"

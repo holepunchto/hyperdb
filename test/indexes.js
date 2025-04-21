@@ -141,7 +141,7 @@ test('delete on an index', async function ({ build }, t) {
     t.alike(doc, expected)
   }
 
-  db.delete('@example/members', { name: 'test' })
+  await db.delete('@example/members', { name: 'test' })
 
   {
     const doc = await db.get('@example/last-teenager', 15)

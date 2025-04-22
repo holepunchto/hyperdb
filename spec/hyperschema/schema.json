@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "schema": [
+    {
+      "name": "range",
+      "namespace": "hyperdb-extension",
+      "compact": true,
+      "flagsPosition": 0,
+      "fields": [
+        {
+          "name": "gt",
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "gte",
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "lt",
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "lte",
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "reverse",
+          "type": "bool",
+          "version": 1
+        },
+        {
+          "name": "limit",
+          "type": "int",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "message",
+      "namespace": "hyperdb-extension",
+      "compact": true,
+      "flagsPosition": 1,
+      "fields": [
+        {
+          "name": "type",
+          "required": true,
+          "type": "uint",
+          "version": 1
+        },
+        {
+          "name": "version",
+          "type": "uint",
+          "version": 1
+        },
+        {
+          "name": "collectionName",
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "range",
+          "type": "@hyperdb-extension/range",
+          "version": 1
+        },
+        {
+          "name": "query",
+          "type": "buffer",
+          "version": 1
+        },
+        {
+          "name": "blocks",
+          "array": true,
+          "type": "uint",
+          "version": 1
+        },
+        {
+          "name": "start",
+          "type": "uint",
+          "version": 1
+        },
+        {
+          "name": "end",
+          "type": "uint",
+          "version": 1
+        }
+      ]
+    }
+  ]
+}

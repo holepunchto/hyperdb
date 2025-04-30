@@ -98,7 +98,7 @@ await db.insert('@example/members', { name: 'sean', age: 36 })
 await db.flush() // commit changes
 
 // Query collection
-const maf = await db.findOne('@example/members', { name: 'maf' })
+const maf = await db.get('@example/members', { name: 'maf' })
 console.log('maf', maf)
 ```
 

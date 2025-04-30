@@ -70,10 +70,10 @@ exampleDB.indexes.register({
 HyperDB.toDisk(db)
 ```
 
-Define helper functions in `helper.js`:
+Define helper functions in `helpers.js`:
 
 ```js
-// helper.js
+// helpers.js
 exports.mapNameToLowerCase = (record, context) => {
   const name = record.name.toLowerCase().trim()
   return name ? [name] : []

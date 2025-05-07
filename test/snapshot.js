@@ -91,3 +91,15 @@ test('a divergent tx should not clear the memview', async function ({ create }, 
 
   await db.close()
 })
+
+test('root close waits for snapshot closes', async function ({ create }, t) {
+  const db = await create()
+
+  const snap = db.snapshot()
+  const snapOfSnap = snap.snapshot()
+
+  await db.close()
+
+  t.ok(snap.closed)
+  t.ok(snapOfSnap.closed)
+})

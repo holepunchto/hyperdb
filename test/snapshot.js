@@ -38,11 +38,10 @@ test('basic snapshot', async function ({ create }, t) {
   t.alike(await db.find('@db/members').toArray(), [{ id: 'someone', age: 41 }])
   t.alike(await snap.find('@db/members').toArray(), [{ id: 'someone', age: 40 }])
 
-  await db.close()
-
   t.alike(await snap.find('@db/members').toArray(), [{ id: 'someone', age: 40 }])
 
   await snap.close()
+  await db.close()
 })
 
 test('snap of snap', async function ({ create }, t) {

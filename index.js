@@ -1,9 +1,9 @@
-const IndexStream = require('./lib/stream')
+const IndexStream = require('./lib/stream.js')
 const b4a = require('b4a')
 
 // engines
-const RocksEngine = require('./lib/engine/rocks')
-const BeeEngine = require('./lib/engine/bee')
+const RocksEngine = require('./lib/engine/rocks.js')
+const BeeEngine = require('./lib/engine/bee.js')
 
 let compareHasDups = false
 
@@ -228,6 +228,7 @@ class HyperDB {
   } = {}) {
     this.version = version
     this.context = context
+    this.index = 0 // for the session
     this.engine = engine
     this.engineSnapshot = snapshot
     this.definition = definition
@@ -236,7 +237,7 @@ class HyperDB {
     this.watchers = null
     this.closing = null
 
-    engine.refs++
+    this.engine.sessions.add(this)
   }
 
   static isDefinition (definition) {
@@ -327,7 +328,14 @@ class HyperDB {
     this.engineSnapshot.unref()
     this.engineSnapshot = null
 
-    if (--this.engine.refs === 0) await this.engine.close()
+    // if root, close all
+    if (this.rootInstance === this) {
+      await this.engine.sessions.close(this)
+    }
+
+    this.engine.sessions.remove(this)
+
+    if (this.engine.sessions.size === 0) await this.engine.close()
     this.engine = null
 
     this.rootInstance = null

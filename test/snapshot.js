@@ -38,11 +38,10 @@ test('basic snapshot', async function ({ create }, t) {
   t.alike(await db.find('@db/members').toArray(), [{ id: 'someone', age: 41 }])
   t.alike(await snap.find('@db/members').toArray(), [{ id: 'someone', age: 40 }])
 
-  await db.close()
-
   t.alike(await snap.find('@db/members').toArray(), [{ id: 'someone', age: 40 }])
 
   await snap.close()
+  await db.close()
 })
 
 test('snap of snap', async function ({ create }, t) {
@@ -91,4 +90,16 @@ test('a divergent tx should not clear the memview', async function ({ create }, 
   t.is(all.length, 2)
 
   await db.close()
+})
+
+test('root close waits for snapshot closes', async function ({ create }, t) {
+  const db = await create()
+
+  const snap = db.snapshot()
+  const snapOfSnap = snap.snapshot()
+
+  await db.close()
+
+  t.ok(snap.closed)
+  t.ok(snapOfSnap.closed)
 })

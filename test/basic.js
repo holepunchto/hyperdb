@@ -445,3 +445,24 @@ test('basic example with booleans', async function ({ create }, t) {
 
   await db.close()
 })
+
+test.solo('find with multi-key filter on index', async function ({ create }, t) {
+  const db = await create({ fixture: 6 })
+
+  await db.insert('@db/members', { id: 'maf', age: 33 })
+  await db.insert('@db/members', { id: 'andrew', age: 25 })
+  await db.insert('@db/members', { id: 'maf2', age: 40 })
+  await db.insert('@db/members', { id: 'andrew2', age: 50 })
+
+  await db.flush()
+
+  {
+    const result = await db.find('@db/members-by-age', { gt: { id: 'a', age: 40 } }).toArray()
+    t.alike(result, [
+      { id: 'andrew2', age: 50 }
+    ])
+    console.log(result)
+  }
+
+  await db.close()
+})

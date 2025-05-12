@@ -224,17 +224,20 @@ class HyperDB {
     updates = new Updates(0, []),
     rootInstance = null,
     writable = true,
-    context = null
+    context = null,
+    trace = null
   } = {}) {
     this.version = version
     this.context = context
+    this.writable = writable
     this.index = 0 // for the session
     this.engine = engine
     this.engineSnapshot = snapshot
     this.definition = definition
     this.updates = updates
-    this.rootInstance = writable === true ? (rootInstance || this) : null
+    this.rootInstance = rootInstance || this
     this.watchers = null
+    this.trace = trace
     this.closing = null
 
     this.engine.sessions.add(this)
@@ -276,16 +279,12 @@ class HyperDB {
     return this.engine === null
   }
 
-  get writable () {
-    return this.rootInstance !== null
-  }
-
   get readable () {
     return this.closing !== null
   }
 
   get autoClose () {
-    return this.rootInstance !== null && this.rootInstance !== this
+    return this.writable && this.rootInstance !== this
   }
 
   cork () {
@@ -358,7 +357,7 @@ class HyperDB {
     maybeClosed(this)
 
     const context = (options && options.context) || this.context
-    return this._createSnapshot(null, false, context)
+    return this._createSnapshot(this, false, context)
   }
 
   transaction (options) {
@@ -467,12 +466,21 @@ class HyperDB {
     const u = this.updates.get(key)
     const value = (u !== null && checkout === -1) ? u.value : await snap.get(key, checkout)
 
-    return value === null ? null : collection.reconstruct(this.version, key, value)
+    return this.finalize(collection, this.version, checkout, key, value)
   }
 
   // TODO: needs to wait for pending inserts/deletes and then lock all future ones whilst it runs
   _runTrigger (collection, key, doc) {
     return collection.trigger(this, key, doc, this.context)
+  }
+
+  finalize (collection, version, checkout, key, value) {
+    if (value === null) return null
+
+    const reconstructed = collection.reconstruct(version, key, value)
+    if (this.rootInstance.trace) this.rootInstance.trace({ collection: collection.name, value: reconstructed, checkout })
+
+    return reconstructed
   }
 
   async delete (collectionName, doc) {
@@ -602,7 +610,7 @@ class HyperDB {
     if (this.engineSnapshot.opened === false) await this.engineSnapshot.ready()
 
     if (this.updating > 0) throw new Error('Insert/delete in progress, refusing to commit')
-    if (this.rootInstance === null) throw new Error('Instance is not writable, refusing to commit')
+    if (!this.writable) throw new Error('Instance is not writable, refusing to commit')
     if (this.updates.size > 0) await this._flush()
     if (this.autoClose === true) await this.close()
   }

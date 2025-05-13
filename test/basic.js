@@ -454,17 +454,21 @@ test('read tracing', async function ({ create }, t) {
   await db.insert('@db/members', { id: 'user3', age: 100 })
   await db.flush()
 
+  const collections = new Set()
   const names = new Set()
   await db.find('@db/members').toArray()
 
   t.is(names.size, 3)
+  t.is(collections.size, 1)
   t.ok(names.has('user1'))
   t.ok(names.has('user2'))
   t.ok(names.has('user3'))
+  t.ok(collections.has('@db/members'))
 
   await db.close()
 
-  function trace (res) {
-    names.add(res.value.id)
+  function trace (collection, record) {
+    collections.add(collection)
+    names.add(record.id)
   }
 })

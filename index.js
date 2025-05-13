@@ -478,7 +478,7 @@ class HyperDB {
     if (value === null) return null
 
     const reconstructed = collection.reconstruct(version, key, value)
-    if (this.rootInstance.trace) this.rootInstance.trace({ collection: collection.name, value: reconstructed, checkout })
+    if (this.rootInstance.trace) this.rootInstance.trace(collection.name, reconstructed, checkout)
 
     return reconstructed
   }

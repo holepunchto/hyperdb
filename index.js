@@ -336,8 +336,6 @@ class HyperDB {
 
     if (this.engine.sessions.size === 0) await this.engine.close()
     this.engine = null
-
-    this.rootInstance = null
   }
 
   _createSnapshot (rootInstance, writable, context) {

@@ -445,3 +445,30 @@ test('basic example with booleans', async function ({ create }, t) {
 
   await db.close()
 })
+
+test('read tracing', async function ({ create }, t) {
+  const db = await create({ trace })
+
+  await db.insert('@db/members', { id: 'user1', age: 44 })
+  await db.insert('@db/members', { id: 'user2', age: 50 })
+  await db.insert('@db/members', { id: 'user3', age: 100 })
+  await db.flush()
+
+  const collections = new Set()
+  const names = new Set()
+  await db.find('@db/members').toArray()
+
+  t.is(names.size, 3)
+  t.is(collections.size, 1)
+  t.ok(names.has('user1'))
+  t.ok(names.has('user2'))
+  t.ok(names.has('user3'))
+  t.ok(collections.has('@db/members'))
+
+  await db.close()
+
+  function trace (collection, record) {
+    collections.add(collection)
+    names.add(record.id)
+  }
+})

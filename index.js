@@ -246,14 +246,16 @@ class HyperDB {
 
   static rocks (storage, definition, options = {}) {
     const readOnly = options.readOnly === true || options.readonly === true
-    return new HyperDB(new RocksEngine(storage, { readOnly }), definition, options)
+    const trace = options.trace || null
+    return new HyperDB(new RocksEngine(storage, { readOnly, trace }), definition, options)
   }
 
   static bee (core, definition, options = {}) {
     const extension = options.extension
     const autoUpdate = !!options.autoUpdate
+    const trace = options.trace || null
 
-    const db = new HyperDB(new BeeEngine(core, { extension }), definition, options)
+    const db = new HyperDB(new BeeEngine(core, { extension, trace }), definition, options)
 
     if (autoUpdate) {
       const update = db.update.bind(db)
@@ -337,8 +339,6 @@ class HyperDB {
 
     if (this.engine.sessions.size === 0) await this.engine.close()
     this.engine = null
-
-    this.rootInstance = null
   }
 
   _createSnapshot (rootInstance, writable, context) {
@@ -358,7 +358,7 @@ class HyperDB {
     maybeClosed(this)
 
     const context = (options && options.context) || this.context
-    return this._createSnapshot(null, false, context)
+    return this._createSnapshot(this, false, context)
   }
 
   transaction (options) {
@@ -467,7 +467,7 @@ class HyperDB {
     const u = this.updates.get(key)
     const value = (u !== null && checkout === -1) ? u.value : await snap.get(key, checkout)
 
-    return value === null ? null : collection.reconstruct(this.version, key, value)
+    return this.engine.finalize(collection, this.version, checkout, key, value)
   }
 
   // TODO: needs to wait for pending inserts/deletes and then lock all future ones whilst it runs

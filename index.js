@@ -467,21 +467,12 @@ class HyperDB {
     const u = this.updates.get(key)
     const value = (u !== null && checkout === -1) ? u.value : await snap.get(key, checkout)
 
-    return this.finalize(collection, this.version, checkout, key, value)
+    return this.engine.finalize(collection, this.version, checkout, key, value)
   }
 
   // TODO: needs to wait for pending inserts/deletes and then lock all future ones whilst it runs
   _runTrigger (collection, key, doc) {
     return collection.trigger(this, key, doc, this.context)
-  }
-
-  finalize (collection, version, checkout, key, value) {
-    if (value === null) return null
-
-    const reconstructed = collection.reconstruct(version, key, value)
-    if (this.engine.trace) this.engine.trace(collection.name, reconstructed, checkout)
-
-    return reconstructed
   }
 
   async delete (collectionName, doc) {

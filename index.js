@@ -467,6 +467,9 @@ class HyperDB {
     const u = this.updates.get(key)
     const value = (u !== null && checkout === -1) ? u.value : await snap.get(key, checkout)
 
+    // check again now cause we did async work above to engine might be nulled out
+    maybeClosed(this)
+
     return this.engine.finalize(collection, this.version, checkout, key, value)
   }
 

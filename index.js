@@ -266,10 +266,6 @@ class HyperDB {
     return db
   }
 
-  get writable () {
-    return this.rootInstance !== null
-  }
-
   get core () {
     return this.engine.core
   }
@@ -280,6 +276,10 @@ class HyperDB {
 
   get closed () {
     return this.engine === null
+  }
+
+  get writable () {
+    return this.rootInstance !== null
   }
 
   get readable () {

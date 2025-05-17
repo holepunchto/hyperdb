@@ -224,8 +224,7 @@ class HyperDB {
     updates = new Updates(0, []),
     rootInstance = null,
     writable = true,
-    context = null,
-    trace = null
+    context = null
   } = {}) {
     this.version = version
     this.context = context
@@ -237,7 +236,6 @@ class HyperDB {
     this.updates = updates
     this.rootInstance = rootInstance || this
     this.watchers = null
-    this.trace = trace
     this.closing = null
 
     this.engine.sessions.add(this)
@@ -249,14 +247,16 @@ class HyperDB {
 
   static rocks (storage, definition, options = {}) {
     const readOnly = options.readOnly === true || options.readonly === true
-    return new HyperDB(new RocksEngine(storage, { readOnly }), definition, options)
+    const trace = options.trace || null
+    return new HyperDB(new RocksEngine(storage, { readOnly, trace }), definition, options)
   }
 
   static bee (core, definition, options = {}) {
     const extension = options.extension
     const autoUpdate = !!options.autoUpdate
+    const trace = options.trace || null
 
-    const db = new HyperDB(new BeeEngine(core, { extension }), definition, options)
+    const db = new HyperDB(new BeeEngine(core, { extension, trace }), definition, options)
 
     if (autoUpdate) {
       const update = db.update.bind(db)
@@ -476,7 +476,7 @@ class HyperDB {
     if (value === null) return null
 
     const reconstructed = collection.reconstruct(version, key, value)
-    if (this.rootInstance.trace) this.rootInstance.trace(collection.name, reconstructed, checkout)
+    if (this.engine.trace) this.engine.trace(collection.name, reconstructed, checkout)
 
     return reconstructed
   }

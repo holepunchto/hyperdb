@@ -476,6 +476,9 @@ test('read tracing', async function ({ create }, t) {
 test('no read tracing on transactions', async function ({ create }, t) {
   const db = await create({ trace })
 
+  const collections = new Set()
+  const names = new Set()
+
   {
     const tx = db.transaction()
 
@@ -487,8 +490,6 @@ test('no read tracing on transactions', async function ({ create }, t) {
 
   {
     const tx = db.transaction()
-    const collections = new Set()
-    const names = new Set()
     await tx.find('@db/members').toArray()
 
     t.is(names.size, 0)

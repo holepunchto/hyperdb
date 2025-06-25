@@ -282,6 +282,11 @@ class HyperDB {
     return this.rootInstance !== null
   }
 
+  get traceable () {
+    // basically, are we not a write tx
+    return this.rootInstance === this || this.rootInstance === null
+  }
+
   get readable () {
     return this.closing !== null
   }
@@ -470,7 +475,7 @@ class HyperDB {
     // check again now cause we did async work above to engine might be nulled out
     maybeClosed(this)
 
-    return this.engine.finalize(collection, this.version, checkout, key, value)
+    return this.engine.finalize(collection, this.version, checkout, this.traceable, key, value)
   }
 
   // TODO: needs to wait for pending inserts/deletes and then lock all future ones whilst it runs

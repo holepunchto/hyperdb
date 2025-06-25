@@ -472,3 +472,35 @@ test('read tracing', async function ({ create }, t) {
     names.add(record.id)
   }
 })
+
+test('no read tracing on transactions', async function ({ create }, t) {
+  const db = await create({ trace })
+
+  {
+    const tx = db.transaction()
+
+    await tx.insert('@db/members', { id: 'user1', age: 44 })
+    await tx.insert('@db/members', { id: 'user2', age: 50 })
+    await tx.insert('@db/members', { id: 'user3', age: 100 })
+    await tx.flush()
+  }
+
+  {
+    const tx = db.transaction()
+    const collections = new Set()
+    const names = new Set()
+    await tx.find('@db/members').toArray()
+
+    t.is(names.size, 0)
+    t.is(collections.size, 0)
+
+    await tx.close()
+  }
+
+  await db.close()
+
+  function trace (collection, record) {
+    collections.add(collection)
+    names.add(record.id)
+  }
+})

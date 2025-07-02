@@ -507,7 +507,7 @@ test('no read tracing on transactions', async function ({ create }, t) {
 })
 
 test('exclusive transactions', async function ({ create }, t) {
-  const db = await create({ trace })
+  const db = await create()
 
   {
     const tx = await db.exclusiveTransaction()
@@ -526,9 +526,4 @@ test('exclusive transactions', async function ({ create }, t) {
   }
 
   await db.close()
-
-  function trace (collection, record) {
-    collections.add(collection)
-    names.add(record.id)
-  }
 })

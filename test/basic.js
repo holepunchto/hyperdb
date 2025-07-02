@@ -505,3 +505,30 @@ test('no read tracing on transactions', async function ({ create }, t) {
     names.add(record.id)
   }
 })
+
+test('exclusive transactions', async function ({ create }, t) {
+  const db = await create({ trace })
+
+  {
+    const tx = await db.exclusiveTransaction()
+
+    await tx.insert('@db/members', { id: 'user1', age: 44 })
+    await tx.insert('@db/members', { id: 'user2', age: 50 })
+    await tx.insert('@db/members', { id: 'user3', age: 100 })
+    await tx.flush()
+  }
+
+  {
+    const tx = await db.exclusiveTransaction()
+    t.is((await tx.find('@db/members').toArray()).length, 3)
+
+    await tx.close()
+  }
+
+  await db.close()
+
+  function trace (collection, record) {
+    collections.add(collection)
+    names.add(record.id)
+  }
+})

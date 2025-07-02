@@ -46,6 +46,7 @@
     "index-encoder": "^3.4.0",
     "refcounter": "^1.0.0",
     "rocksdb-native": "^3.0.0",
+    "scope-lock": "^1.2.4",
     "streamx": "^2.20.0"
   },
   "devDependencies": {

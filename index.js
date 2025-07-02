@@ -342,7 +342,9 @@ class HyperDB {
 
     this.engine.sessions.remove(this)
 
+    if (this.engine.tx === this) this.engine.exit()
     if (this.engine.sessions.size === 0) await this.engine.close()
+
     this.engine = null
   }
 
@@ -364,6 +366,19 @@ class HyperDB {
 
     const context = (options && options.context) || this.context
     return this._createSnapshot(this, false, context)
+  }
+
+  // in future major, lets move transaction to be exclusive (aka sync) always
+  async exclusiveTransaction (options) {
+    await this.engine.enter()
+
+    if (this.closing) {
+      this.engine.exit()
+      maybeClosed(this)
+    }
+
+    this.engine.tx = this.transaction(options)
+    return this.engine.tx
   }
 
   transaction (options) {

@@ -81,12 +81,16 @@ function builder (t, create) {
 }
 
 function replicate (t, a, b) {
+  let destroying = null
+
   const s1 = a.core.replicate(true)
   const s2 = b.core.replicate(false)
 
   s1.pipe(s2).pipe(s1)
 
-  t.teardown(() => Promise.all([destroy(s1), destroy(s2)]))
+  t.teardown(teardown)
+
+  return teardown
 
   function destroy (s) {
     if (s.destroyed) return
@@ -95,6 +99,11 @@ function replicate (t, a, b) {
       s.on('close', resolve)
       s.destroy()
     })
+  }
+
+  function teardown () {
+    if (!destroying) destroying = Promise.all([destroy(s1), destroy(s2)])
+    return destroying
   }
 }
 

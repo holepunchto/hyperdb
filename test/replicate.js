@@ -105,3 +105,34 @@ test.bee('auto update but writable', async function ({ create }, t) {
 
   await db.close()
 })
+
+test.bee('requests are cleared on close', async function ({ create }, t) {
+  const db = await create()
+
+  await db.insert('@db/members', { id: 'someone', age: 40 })
+  await db.flush()
+
+  const clone = await create({ key: db.core.key, autoUpdate: true })
+
+  t.alike(clone.core.key, db.core.key)
+
+  const unreplicate = replicate(t, clone, db)
+
+  await new Promise(resolve => clone.core.once('append', resolve))
+
+  await unreplicate()
+
+  const members = clone.get('@db/members', { id: 'someone' })
+  const cancelled = t.exception(members, /REQUEST_CANCELLED/)
+
+  await new Promise(resolve => setTimeout(resolve, 10))
+
+  await clone.close()
+
+  await cancelled
+
+  t.teardown(async () => {
+    await db.close()
+    await clone.close()
+  })
+})

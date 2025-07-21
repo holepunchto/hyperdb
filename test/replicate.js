@@ -106,7 +106,7 @@ test.bee('auto update but writable', async function ({ create }, t) {
   await db.close()
 })
 
-test.bee('requests are cleared on close', async function ({ create }, t) {
+test.bee.solo('requests are cleared on close', async function ({ create }, t) {
   const db = await create()
 
   await db.insert('@db/members', { id: 'someone', age: 40 })

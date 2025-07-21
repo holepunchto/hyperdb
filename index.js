@@ -236,6 +236,7 @@ class HyperDB {
     this.rootInstance = writable === true ? (rootInstance || this) : null
     this.watchers = null
     this.closing = null
+    this.activeRequests = []
 
     this.engine.sessions.add(this)
   }
@@ -329,6 +330,8 @@ class HyperDB {
   }
 
   async _close () {
+    this.engine.clearRequests(this.activeRequests)
+
     this.updates.unref()
     this.updates = null
 
@@ -468,7 +471,7 @@ class HyperDB {
       const u = this.updates.getIndex(index, key)
       if (u !== null && checkout === -1) return u.value === null ? null : index.collection.reconstruct(this.version, u.key, u.value)
 
-      const value = await snap.get(key, checkout)
+      const value = await snap.get(key, checkout, this.activeRequests)
       if (value === null) return null
 
       return this._getCollection(index.collection, snap, index.reconstruct(key, value), checkout)
@@ -485,7 +488,7 @@ class HyperDB {
     const key = b4a.isBuffer(doc) ? doc : collection.encodeKey(doc)
 
     const u = this.updates.get(key)
-    const value = (u !== null && checkout === -1) ? u.value : await snap.get(key, checkout)
+    const value = (u !== null && checkout === -1) ? u.value : await snap.get(key, checkout, this.activeRequests)
 
     // check again now cause we did async work above to engine might be nulled out
     maybeClosed(this)
@@ -514,7 +517,7 @@ class HyperDB {
     let prevValue = null
 
     try {
-      prevValue = await this.engineSnapshot.get(key)
+      prevValue = await this.engineSnapshot.get(key, -1, this.activeRequests)
       if (collection.trigger !== null) await this._runTrigger(collection, doc, null)
 
       if (prevValue === null) {
@@ -558,7 +561,7 @@ class HyperDB {
     let prevValue = null
 
     try {
-      prevValue = await this.engineSnapshot.get(key)
+      prevValue = await this.engineSnapshot.get(key, -1, this.activeRequests)
       if (collection.trigger !== null) await this._runTrigger(collection, doc, doc)
 
       if (prevValue !== null && b4a.equals(value, prevValue)) {

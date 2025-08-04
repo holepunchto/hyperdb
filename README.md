@@ -237,6 +237,15 @@ Make a readonly snapshot of the database. All reads/streams are locked in time o
 Make a writable snapshot of the database. All reads/streams are locked in time on a snapshot from the time you call the snapshot method.
 When you flush this one, it updates the main instance also.
 
+Warnings:
+- Transactions must always be closed. Flushing a transaction closes it, but when a transaction is cancelled (for example due to an error), `transaction.close()` has to be called explicitly.
+- Transactions must not be run in parallel. If you do not want to write your own locking mechanism, use `await db.exclusiveTransaction()` instead.
+
+#### `db = await db.exclusiveTransaction()`
+
+Like `db.transaction()`, but with a built-in lock to ensure transactions do not run concurrently.
+
+
 #### `await db.ready()`
 
 Wait for the database to fully open.

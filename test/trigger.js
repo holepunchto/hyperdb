@@ -65,11 +65,10 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
     ]
   })
 
-  Hyperschema.toDisk(schema)
+  const db = HyperDB.from(paths.db)
+  db.registerSchema(schema)
 
-  const db = HyperDB.from(paths.schema, paths.db)
   const exampleDB = db.namespace('example')
-
   exampleDB.require(paths.helpers)
 
   exampleDB.collections.register({
@@ -85,5 +84,6 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
     trigger: 'triggerCountMembers'
   })
 
+  Hyperschema.toDisk(schema)
   HyperDB.toDisk(db)
 }

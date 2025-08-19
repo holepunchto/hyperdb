@@ -343,6 +343,8 @@ db.collections.register({
 })
 ```
 
+##### Collection Triggers
+
 `trigger` is a callback run when an entry is modified and can be used to update other entries in the database. The callback should be registered via `db.require(path)` and should have the following function signature:
 
 ```js
@@ -354,19 +356,45 @@ Trigger callback arguments:
 - `query` is the query being used to update the database. In the case of `db.insert()` the `query` is the document being inserted.
 - `record` is the document being inserted, if `null` the document matching `query` is being deleted.
 
-A trigger that counts the number of members (a collection named `@example/member`) and stores them as the collection `@example/member-info` could be implemented like this:
+###### Trigger Example
+
+If you want to maintain metadata about a collection such as "how many active records does this collection have?" you can use a collection trigger and maintain the diff.
 
 ```js
-exports.triggerCount = async (db, query, record) => {
-  const info = (await db.get('@example/member-info')) || { count: 0 }
-  const existing = await db.get('@example/member', query)
-  if (existing && record) return // The record is being updated
+// helpers.js
+exports.membersTrigger = async function (db, key, record) {
+  let [digest, previous] = await Promise.all([
+    db.get('@ns/members-digest'),
+    db.get('@ns/members', key)
+  ])
 
-  await db.insert('@example/member-info', { count: record ? info.count + 1 : info.count - 1 })
+  if (!digest) digest = { members: 0 }
+
+  const wasInserted = !!previous
+  const isInserted = !!record
+
+  if (!wasInserted && isInserted) digest.members += 1
+  if (wasInserted && !isInserted) digest.members -= 1
+
+  await db.insert('@ns/members-digest', digest)
 }
-```
 
-`@example/member-info` should be a collection with `derived` set to `true` since it is derived from other collections.
+// schema.js
+db.register('./helpers.js')
+
+db.collections.register({
+  name: 'members-digest',
+  key: [],
+  schema: ...
+})
+
+db.collections.register({
+  name: 'members',
+  trigger: 'membersTrigger',
+  key: [...],
+  schema: ...
+})
+```
 
 ### Indexes
 
@@ -427,47 +455,6 @@ db.indexes.register({
     },
     map: 'keyMap' // the callback name from helpers.js
   }
-})
-```
-
-##### Collection Triggers
-
-If you want to maintain metadata about a collection such as "how many active records do this collection have?"
-you can use a collection trigger and maintain the diff.
-
-```js
-// helpers.js
-exports.membersTrigger = async function (db, key, record) {
-  let [digest, previous] = await Promise.all([
-    db.get('@ns/members-digest'),
-    db.get('@ns/members', key)
-  ])
-
-  if (!digest) digest = { members: 0 }
-
-  const wasInserted = !!previous
-  const isInserted = !!record
-
-  if (!wasInserted && isInserted) digest.members += 1
-  if (wasInserted && !isInserted) digest.members -= 1
-
-  await db.insert('@ns/members-digest', digest)
-}
-
-// schema.js
-db.register('./helpers.js')
-
-db.collections.register({
-  name: 'members-digest',
-  key: [],
-  schema: ...
-})
-
-db.collections.register({
-  name: 'members',
-  trigger: 'membersTrigger',
-  key: [...],
-  schema: ...
 })
 ```
 

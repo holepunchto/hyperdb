@@ -430,6 +430,47 @@ db.indexes.register({
 })
 ```
 
+##### Collection Triggers
+
+If you want to maintain metadata about a collection such as "how many active records do this collection have?"
+you can use a collection trigger and maintain the diff.
+
+```js
+// helpers.js
+exports.membersTrigger = async function (db, key, record) {
+  let [digest, previous] = await Promise.all([
+    db.get('@ns/members-digest'),
+    db.get('@ns/members', key)
+  ])
+
+  if (!digest) digest = { members: 0 }
+
+  const wasInserted = !!previous
+  const isInserted = !!record
+
+  if (!wasInserted && isInserted) digest.members += 1
+  if (wasInserted && !isInserted) digest.members -= 1
+
+  await db.insert('@ns/members-digest', digest)
+}
+
+// schema.js
+db.register('./helpers.js')
+
+db.collections.register({
+  name: 'members-digest',
+  key: [],
+  schema: ...
+})
+
+db.collections.register({
+  name: 'members',
+  trigger: 'membersTrigger',
+  key: [...],
+  schema: ...
+})
+```
+
 ## License
 
 Apache-2.0

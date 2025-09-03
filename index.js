@@ -296,6 +296,11 @@ class HyperDB {
     return this.rootInstance !== null && this.rootInstance !== this
   }
 
+  setDefinition (definition) {
+    this.version = definition.version
+    this.definition = definition
+  }
+
   cork () {
     if (this.engineSnapshot !== null) this.engineSnapshot.cork()
   }

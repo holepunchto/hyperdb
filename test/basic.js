@@ -50,7 +50,6 @@ test('basic full example', async function ({ create }, t) {
   t.alike(await db.get('members', { id: 'anna' }), { id: 'anna', age: 32 })
   t.alike(await db.get('members', { id: 'andrew' }), { id: 'andrew', age: 34 })
 
-  console.log('sup')
   await db.close()
 })
 

@@ -271,8 +271,9 @@ class HyperDB {
   static bee2 (store, definition, options = {}) {
     const autoUpdate = !!options.autoUpdate
     const trace = options.trace || null
+    const key = options.key || null
 
-    const db = new HyperDB(new Bee2Engine(store, { trace }), definition, options)
+    const db = new HyperDB(new Bee2Engine(store, { trace, key }), definition, options)
 
     if (autoUpdate) {
       const update = db.update.bind(db)
@@ -620,7 +621,7 @@ class HyperDB {
     this.updates.flush()
 
     this.engineSnapshot.unref()
-    this.engineSnapshot = this.engine.snapshot()
+    this.engineSnapshot = this.engine.update()
 
     if (this.watchers !== null) {
       for (const fn of this.watchers) fn()

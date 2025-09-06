@@ -31,7 +31,7 @@ function test (name, fn) {
 function createTester (type) {
   const make = type === 'rocks'
     ? (dir, def, opts = {}) => HyperDB.rocks(dir, def, opts)
-    : (dir, def, opts = {}) => HyperDB.bee2(new Corestore(dir, opts.key), def, opts)
+    : (dir, def, opts = {}) => HyperDB.bee2(new Corestore(dir), def, opts)
 
   const test = runner(brittle)
 

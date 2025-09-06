@@ -52,6 +52,7 @@
   },
   "devDependencies": {
     "brittle": "^3.7.0",
+    "corestore": "^7.4.5",
     "hypercore": "^11.0.0",
     "standard": "^17.1.0",
     "test-tmp": "^1.2.1"

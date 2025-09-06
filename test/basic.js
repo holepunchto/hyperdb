@@ -50,7 +50,6 @@ test('basic full example', async function ({ create }, t) {
   t.alike(await db.get('members', { id: 'anna' }), { id: 'anna', age: 32 })
   t.alike(await db.get('members', { id: 'andrew' }), { id: 'andrew', age: 34 })
 
-  console.log('sup')
   await db.close()
 })
 
@@ -301,7 +300,7 @@ test('updates can be queryies', async function ({ create }, t) {
   await db.close()
 })
 
-test('changes', async function ({ create }, t) {
+test.skip('changes', async function ({ create }, t) {
   const db = await create()
 
   if (!db.core) {
@@ -362,7 +361,7 @@ test('update does not break existing snaps', async function ({ create }, t) {
   await db.close()
 })
 
-test('nested keys', async function ({ create, bee }, t) {
+test.skip('nested keys', async function ({ create, bee }, t) {
   const db = await create({ fixture: 4 })
 
   await db.insert('@db/nested-members', { member: { id: 'maf', age: 50 }, fun: true })

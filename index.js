@@ -4,6 +4,7 @@ const b4a = require('b4a')
 // engines
 const RocksEngine = require('./lib/engine/rocks.js')
 const BeeEngine = require('./lib/engine/bee.js')
+const Bee2Engine = require('./lib/engine/bee2.js')
 
 let compareHasDups = false
 
@@ -262,6 +263,21 @@ class HyperDB {
       const update = db.update.bind(db)
       core.on('append', update)
       core.on('truncate', update)
+    }
+
+    return db
+  }
+
+  static bee2 (store, definition, options = {}) {
+    const autoUpdate = !!options.autoUpdate
+    const trace = options.trace || null
+
+    const db = new HyperDB(new Bee2Engine(store, { trace }), definition, options)
+
+    if (autoUpdate) {
+      const update = db.update.bind(db)
+      db.core.on('append', update)
+      db.core.on('truncate', update)
     }
 
     return db

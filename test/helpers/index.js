@@ -1,8 +1,8 @@
 const brittle = require('brittle')
 const tmp = require('test-tmp')
 const path = require('path')
+const Corestore = require('corestore')
 const Hyperschema = require('hyperschema')
-const Hypercore = require('hypercore')
 const Builder = require('../../builder')
 const HyperDB = require('../../')
 
@@ -31,7 +31,7 @@ function test (name, fn) {
 function createTester (type) {
   const make = type === 'rocks'
     ? (dir, def, opts = {}) => HyperDB.rocks(dir, def, opts)
-    : (dir, def, opts = {}) => HyperDB.bee(new Hypercore(dir, opts.key), def, opts)
+    : (dir, def, opts = {}) => HyperDB.bee2(new Corestore(dir, opts.key), def, opts)
 
   const test = runner(brittle)
 

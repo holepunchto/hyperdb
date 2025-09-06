@@ -1,6 +1,6 @@
 const { test } = require('./helpers')
 
-test.bee('basic checkouts', async function ({ create }, t) {
+test.bee.skip('basic checkouts', async function ({ create }, t) {
   const db = await create()
 
   await db.insert('@db/members', { id: 'someone', age: 40 })

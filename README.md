@@ -191,8 +191,7 @@ Delete a document from a collection matching the query. NOTE: you have to flush 
 
 #### `bool = db.updated([collection], [query])`
 
-Returns a boolean indicating if this database was updated. Pass a collection and doc query to know if
-a specific record was updated.
+Returns a boolean indicating if this database was updated since last time it was flushed. Pass a collection and doc query to know if a specific record was updated.
 
 #### `const stream = db.changes(range = {})`
 

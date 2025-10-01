@@ -544,7 +544,7 @@ class HyperDB {
     }
   }
 
-  async insert (collectionName, doc) {
+  async insert (collectionName, doc, { force = false } = {}) {
     maybeClosed(this)
 
     if (this.updates.refs > 1) this.updates = this.updates.detach()
@@ -564,7 +564,8 @@ class HyperDB {
       prevValue = await this.engineSnapshot.get(key, -1, this.activeRequests)
       if (collection.trigger !== null) await this._runTrigger(collection, doc, doc)
 
-      if (prevValue !== null && b4a.equals(value, prevValue)) {
+      const same = prevValue !== null && b4a.equals(value, prevValue)
+      if (same && !force) {
         this.updates.delete(key)
         return
       }

@@ -115,9 +115,12 @@ module.exports = function generateCode (hyperdb, { directory = '.', esm = false 
   }
   str += ']\n\n'
   str += 'const indexes = [\n'
+  const lines = []
   for (let i = 0; i < indexes.length; i++) {
-    str += `  ${getId(indexes[i]) + (i < indexes.length - 1 ? ',' : '')}\n`
+    if (indexes[i].deprecated) continue
+    lines.push(`  ${getId(indexes[i])}`)
   }
+  str += lines.join(',\n') + (lines.length ? '\n' : '')
   str += ']\n\n'
 
   if (esm) {
@@ -266,7 +269,11 @@ function generateIndexDefinition (index) {
   str += `  offset: ${collectionId}.indexes.length,\n`
   str += `  collection: ${collectionId}\n`
   str += '}\n'
-  str += `${collectionId}.indexes.push(${id})\n`
+
+  if (!index.deprecated) {
+    str += `${collectionId}.indexes.push(${id})\n`
+  }
+
   return str
 }
 

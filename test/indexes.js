@@ -64,6 +64,25 @@ test('two collections work with indexes', async function ({ build }, t) {
   await db.close()
 })
 
+test('two collections work with indexes, one deprecated', async function ({ build }, t) {
+  const db = await build(createExampleDBWithDeprecation)
+
+  await db.insert('@example/members', { name: 'test', age: 16 })
+  await db.insert('@example/devices', { key: 'device-1', name: 'my device' })
+
+  {
+    const all = await db.find('@example/members-by-name').toArray()
+    t.is(all.length, 0, 'deprecated')
+  }
+
+  {
+    const all = await db.find('@example/teenagers').toArray()
+    t.is(all.length, 1)
+  }
+
+  await db.close()
+})
+
 test('index that is smaller than collection has multiple values', async function ({ build }, t) {
   const db = await build(createExampleDB)
 
@@ -214,6 +233,93 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
     name: 'members-by-name',
     collection: '@example/members',
     unique: true,
+    key: {
+      type: 'string',
+      map: 'mapNameToLowerCase'
+    }
+  })
+
+  exampleDB.indexes.register({
+    name: 'teenagers',
+    collection: '@example/members',
+    key: {
+      type: 'uint',
+      map: 'mapTeenager'
+    }
+  })
+
+  exampleDB.indexes.register({
+    name: 'last-teenager',
+    collection: '@example/members',
+    unique: true,
+    key: {
+      type: 'uint',
+      map: 'mapTeenager'
+    }
+  })
+
+  HyperDB.toDisk(db)
+}
+
+function createExampleDBWithDeprecation (HyperDB, Hyperschema, paths) {
+  const schema = Hyperschema.from(paths.schema)
+  const example = schema.namespace('example')
+
+  example.register({
+    name: 'member',
+    fields: [
+      {
+        name: 'name',
+        type: 'string',
+        required: true
+      },
+      {
+        name: 'age',
+        type: 'uint',
+        required: true
+      }
+    ]
+  })
+
+  example.register({
+    name: 'devices',
+    fields: [
+      {
+        name: 'key',
+        type: 'string',
+        required: true
+      },
+      {
+        name: 'name',
+        type: 'string'
+      }
+    ]
+  })
+
+  Hyperschema.toDisk(schema)
+
+  const db = HyperDB.from(paths.schema, paths.db)
+  const exampleDB = db.namespace('example')
+
+  exampleDB.require(paths.helpers)
+
+  exampleDB.collections.register({
+    name: 'devices',
+    schema: '@example/devices',
+    key: ['key']
+  })
+
+  exampleDB.collections.register({
+    name: 'members',
+    schema: '@example/member',
+    key: ['name']
+  })
+
+  exampleDB.indexes.register({
+    name: 'members-by-name',
+    collection: '@example/members',
+    unique: true,
+    deprecated: true,
     key: {
       type: 'string',
       map: 'mapNameToLowerCase'

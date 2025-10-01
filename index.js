@@ -83,7 +83,7 @@ class Updates {
 
   getIndex (index, key) {
     // 99% of all reads
-    if (this.map.size === 0) return null
+    if (this.map.size === 0 || index.offset === -1) return null
 
     const matches = []
 
@@ -196,7 +196,7 @@ class Updates {
     const overlay = []
 
     // 99% of all reads
-    if (this.map.size === 0) return overlay
+    if (this.map.size === 0 || index.offset === -1) return overlay
 
     const collection = index.collection
 

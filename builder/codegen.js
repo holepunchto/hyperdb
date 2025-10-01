@@ -255,6 +255,7 @@ function generateCollectionDefinition (collection) {
 function generateIndexDefinition (index) {
   const id = getId(index)
   const collectionId = getId(index.collection)
+  const offset = index.deprecated ? '-1' : `${collectionId}.indexes.length`
 
   let str = generateCommonPrefix(index)
   str += `// ${s(index.fqn)}\n`
@@ -266,7 +267,7 @@ function generateIndexDefinition (index) {
   str += `  encodeValue: (doc) => ${id}.collection.encodeKey(doc),\n`
   str += generateEncodeIndexKeys(index, ',')
   str += '  reconstruct: (keyBuf, valueBuf) => valueBuf,\n'
-  str += `  offset: ${collectionId}.indexes.length,\n`
+  str += `  offset: ${offset},\n`
   str += `  collection: ${collectionId}\n`
   str += '}\n'
 

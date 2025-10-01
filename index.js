@@ -83,7 +83,7 @@ class Updates {
 
   getIndex (index, key) {
     // 99% of all reads
-    if (this.map.size === 0) return null
+    if (this.map.size === 0 || index.offset === -1) return null
 
     const matches = []
 
@@ -196,7 +196,7 @@ class Updates {
     const overlay = []
 
     // 99% of all reads
-    if (this.map.size === 0) return overlay
+    if (this.map.size === 0 || index.offset === -1) return overlay
 
     const collection = index.collection
 
@@ -544,7 +544,7 @@ class HyperDB {
     }
   }
 
-  async insert (collectionName, doc) {
+  async insert (collectionName, doc, { force = false } = {}) {
     maybeClosed(this)
 
     if (this.updates.refs > 1) this.updates = this.updates.detach()
@@ -564,7 +564,8 @@ class HyperDB {
       prevValue = await this.engineSnapshot.get(key, -1, this.activeRequests)
       if (collection.trigger !== null) await this._runTrigger(collection, doc, doc)
 
-      if (prevValue !== null && b4a.equals(value, prevValue)) {
+      const same = prevValue !== null && b4a.equals(value, prevValue)
+      if (same && !force) {
         this.updates.delete(key)
         return
       }

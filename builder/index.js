@@ -151,6 +151,7 @@ class Index extends DBType {
     super(builder, namespace, description)
     this.isIndex = true
     this.unique = !!description.unique
+    this.deprecated = !!description.deprecated
     this.isMapped = !Array.isArray(description.key)
 
     this.collection = this.builder.typesByName.get(description.collection)
@@ -210,6 +211,7 @@ class Index extends DBType {
       type: INDEX_TYPE,
       collection: this.description.collection,
       unique: this.unique,
+      deprecated: this.deprecated,
       key: Array.isArray(this.key)
         ? this.key
         : {

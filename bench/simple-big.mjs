@@ -24,12 +24,15 @@ while (i < 10_000_000) {
   console.log('total:', i)
 }
 
-await timeQuery('10k members-by-age', '@db/members-by-age', { gt: { age: 90_000 }, limit: 10_000 })
+await timeQuery('10k members-by-age', '@db/members-by-age', {
+  gt: { age: 90_000 },
+  limit: 10_000
+})
 await timeQuery('10 members-by-age', '@db/members-by-age', { limit: 10 })
 await timeQuery('10k members', '@db/members', { limit: 10_000 })
 await timeQuery('last 10 members', '@db/members', { limit: 10, reverse: true })
 
-function timeQuery (label, index, query) {
+function timeQuery(label, index, query) {
   console.time(label)
   return new Promise((resolve) => {
     db.find(index, query)

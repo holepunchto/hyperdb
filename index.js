@@ -8,7 +8,7 @@ const BeeEngine = require('./lib/engine/bee.js')
 let compareHasDups = false
 
 class Updates {
-  constructor (tick, entries) {
+  constructor(tick, entries) {
     this.refs = 1
     this.mutating = 0
     this.tick = tick // internal tie breaker clock for same key updates
@@ -16,11 +16,11 @@ class Updates {
     this.locks = new Map()
   }
 
-  get size () {
+  get size() {
     return this.map.size
   }
 
-  enter (collection) {
+  enter(collection) {
     if (collection.trigger !== null) {
       if (this.locks.has(collection)) return false
       this.locks.set(collection, { resolve: null, promise: null })
@@ -30,7 +30,7 @@ class Updates {
     return true
   }
 
-  exit (collection) {
+  exit(collection) {
     this.mutating--
     if (collection.trigger === null) return
     const { resolve } = this.locks.get(collection)
@@ -38,23 +38,25 @@ class Updates {
     if (resolve) resolve()
   }
 
-  wait (collection) {
+  wait(collection) {
     const state = this.locks.get(collection)
     if (state.promise) return state.promise
-    state.promise = new Promise((resolve) => { state.resolve = resolve })
+    state.promise = new Promise((resolve) => {
+      state.resolve = resolve
+    })
     return state.promise
   }
 
-  ref () {
+  ref() {
     this.refs++
     return this
   }
 
-  unref () {
+  unref() {
     this.refs--
   }
 
-  detach () {
+  detach() {
     const entries = new Array(this.map.size)
 
     if (entries.length > 0) {
@@ -76,12 +78,12 @@ class Updates {
     return new Updates(this.tick, entries)
   }
 
-  get (key) {
+  get(key) {
     const u = this.map.get(b4a.toString(key, 'hex'))
     return u === undefined ? null : u
   }
 
-  getIndex (index, key) {
+  getIndex(index, key) {
     // 99% of all reads
     if (this.map.size === 0 || index.offset === -1) return null
 
@@ -109,11 +111,11 @@ class Updates {
     return latest
   }
 
-  flush () {
+  flush() {
     this.map.clear()
   }
 
-  update (collection, key, value) {
+  update(collection, key, value) {
     const u = {
       created: false,
       tick: this.tick++,
@@ -126,11 +128,11 @@ class Updates {
     return u
   }
 
-  delete (key) {
+  delete(key) {
     this.map.delete(b4a.toString(key, 'hex'))
   }
 
-  batch () {
+  batch() {
     const ordered = new Array(this.map.size)
 
     let sort = false
@@ -172,7 +174,7 @@ class Updates {
     return batch
   }
 
-  collectionOverlay (collection, range, reverse) {
+  collectionOverlay(collection, range, reverse) {
     const overlay = []
 
     // 99% of all reads
@@ -192,7 +194,7 @@ class Updates {
     return sortOverlay(overlay, reverse)
   }
 
-  indexOverlay (index, range, reverse) {
+  indexOverlay(index, range, reverse) {
     const overlay = []
 
     // 99% of all reads
@@ -218,14 +220,18 @@ class Updates {
 }
 
 class HyperDB {
-  constructor (engine, definition, {
-    version = definition.version,
-    snapshot = engine.snapshot(),
-    updates = new Updates(0, []),
-    rootInstance = null,
-    writable = true,
-    context = null
-  } = {}) {
+  constructor(
+    engine,
+    definition,
+    {
+      version = definition.version,
+      snapshot = engine.snapshot(),
+      updates = new Updates(0, []),
+      rootInstance = null,
+      writable = true,
+      context = null
+    } = {}
+  ) {
     this.version = version
     this.context = context
     this.index = 0 // for the session
@@ -233,7 +239,7 @@ class HyperDB {
     this.engineSnapshot = snapshot
     this.definition = definition
     this.updates = updates
-    this.rootInstance = writable === true ? (rootInstance || this) : null
+    this.rootInstance = writable === true ? rootInstance || this : null
     this.watchers = null
     this.closing = null
     this.activeRequests = []
@@ -241,22 +247,30 @@ class HyperDB {
     this.engine.sessions.add(this)
   }
 
-  static isDefinition (definition) {
+  static isDefinition(definition) {
     return !!(definition && typeof definition.resolveCollection === 'function')
   }
 
-  static rocks (storage, definition, options = {}) {
+  static rocks(storage, definition, options = {}) {
     const readOnly = options.readOnly === true || options.readonly === true
     const trace = options.trace || null
-    return new HyperDB(new RocksEngine(storage, { readOnly, trace }), definition, options)
+    return new HyperDB(
+      new RocksEngine(storage, { readOnly, trace }),
+      definition,
+      options
+    )
   }
 
-  static bee (core, definition, options = {}) {
+  static bee(core, definition, options = {}) {
     const extension = options.extension
     const autoUpdate = !!options.autoUpdate
     const trace = options.trace || null
 
-    const db = new HyperDB(new BeeEngine(core, { extension, trace }), definition, options)
+    const db = new HyperDB(
+      new BeeEngine(core, { extension, trace }),
+      definition,
+      options
+    )
 
     if (autoUpdate) {
       const update = db.update.bind(db)
@@ -267,74 +281,81 @@ class HyperDB {
     return db
   }
 
-  get core () {
+  get core() {
     return this.engine.core
   }
 
-  get db () {
+  get db() {
     return this.engine.db
   }
 
-  get closed () {
+  get closed() {
     return this.engine === null
   }
 
-  get writable () {
+  get writable() {
     return this.rootInstance !== null
   }
 
-  get traceable () {
+  get traceable() {
     // basically, are we not a write tx
     return this.rootInstance === this || this.rootInstance === null
   }
 
-  get readable () {
+  get readable() {
     return this.closing !== null
   }
 
-  get autoClose () {
+  get autoClose() {
     return this.rootInstance !== null && this.rootInstance !== this
   }
 
-  setDefinition (definition) {
+  setDefinition(definition) {
     this.version = definition.version
     this.definition = definition
   }
 
-  cork () {
+  cork() {
     if (this.engineSnapshot !== null) this.engineSnapshot.cork()
   }
 
-  uncork () {
+  uncork() {
     if (this.engineSnapshot !== null) this.engineSnapshot.uncork()
   }
 
-  ready () {
-    return this.engineSnapshot === null ? Promise.resolve() : this.engineSnapshot.ready()
+  ready() {
+    return this.engineSnapshot === null
+      ? Promise.resolve()
+      : this.engineSnapshot.ready()
   }
 
-  close () {
+  close() {
     if (this.closing === null) this.closing = this._close()
     return this.closing
   }
 
-  changes (range = {}) {
+  changes(range = {}) {
     maybeClosed(this)
 
-    return this.engine.changes(range.live ? null : this.engineSnapshot, this.version, this.definition, range)
+    return this.engine.changes(
+      range.live ? null : this.engineSnapshot,
+      this.version,
+      this.definition,
+      range
+    )
   }
 
-  watch (fn) {
+  watch(fn) {
     if (this.watchers === null) this.watchers = new Set()
     this.watchers.add(fn)
   }
 
-  unwatch (fn) {
+  unwatch(fn) {
     if (this.watchers === null) return
     this.watchers.delete(fn)
   }
 
-  async _close () {
+  async _close() {
     this.engine.clearRequests(this.activeRequests)
 
     this.updates.unref()
@@ -356,7 +377,7 @@ class HyperDB {
     this.engine = null
   }
 
-  _createSnapshot (rootInstance, writable, context) {
+  _createSnapshot(rootInstance, writable, context) {
     const snapshot = this.engineSnapshot.ref()
 
     return new HyperDB(this.engine, this.definition, {
@@ -369,7 +390,7 @@ class HyperDB {
     })
   }
 
-  snapshot (options) {
+  snapshot(options) {
     maybeClosed(this)
 
     const context = (options && options.context) || this.context
@@ -377,7 +398,7 @@ class HyperDB {
   }
 
   // in future major, lets move transaction to be exclusive (aka sync) always
-  async exclusiveTransaction (options) {
+  async exclusiveTransaction(options) {
     await this.engine.enter()
 
     if (this.closing) {
@@ -389,7 +410,7 @@ class HyperDB {
     return this.engine.tx
   }
 
-  transaction (options) {
+  transaction(options) {
     maybeClosed(this)
 
     if (this.rootInstance !== this) {
@@ -404,33 +425,32 @@ class HyperDB {
     return tx
   }
 
-  find (indexName, query = {}, options) {
+  find(indexName, query = {}, options) {
     if (options) query = { ...query, ...options }
 
     maybeClosed(this)
 
     const index = this.definition.resolveIndex(indexName)
-    const collection = index === null
-      ? this.definition.resolveCollection(indexName)
-      : index.collection
+    const collection =
+      index === null
+        ? this.definition.resolveCollection(indexName)
+        : index.collection
 
     if (collection === null) throw new Error('Unknown index: ' + indexName)
 
-    const {
-      checkout = -1,
-      limit,
-      reverse = false
-    } = query
+    const { checkout = -1, limit, reverse = false } = query
 
-    const range = index === null
-      ? collection.encodeKeyRange(query)
-      : index.encodeKeyRange(query)
+    const range =
+      index === null
+        ? collection.encodeKeyRange(query)
+        : index.encodeKeyRange(query)
 
-    const overlay = checkout !== -1
-      ? []
-      : index === null
-        ? this.updates.collectionOverlay(collection, range, reverse)
-        : this.updates.indexOverlay(index, range, reverse)
+    const overlay =
+      checkout !== -1
+        ? []
+        : index === null
+          ? this.updates.collectionOverlay(collection, range, reverse)
+          : this.updates.indexOverlay(index, range, reverse)
 
     return new IndexStream(this, range, {
       index,
@@ -442,11 +462,11 @@ class HyperDB {
     })
   }
 
-  async findOne (indexName, query, options) {
+  async findOne(indexName, query, options) {
     return this.find(indexName, query, { ...options, limit: 1 }).one()
   }
 
-  updated (collectionName, doc) {
+  updated(collectionName, doc) {
     if (this.updates === null) return false
     if (!collectionName) return this.updates.size > 0
 
@@ -458,34 +478,44 @@ class HyperDB {
     return u !== null
   }
 
-  async get (collectionName, doc, { checkout = -1 } = {}) {
+  async get(collectionName, doc, { checkout = -1 } = {}) {
     maybeClosed(this)
 
     const snap = this.engineSnapshot.ref()
 
     try {
       const collection = this.definition.resolveCollection(collectionName)
-      if (collection !== null) return await this._getCollection(collection, snap, doc, checkout)
+      if (collection !== null)
+        return await this._getCollection(collection, snap, doc, checkout)
 
       const index = this.definition.resolveIndex(collectionName)
-      if (index === null) throw new Error('Unknown index or collection: ' + collectionName)
+      if (index === null)
+        throw new Error('Unknown index or collection: ' + collectionName)
 
       const key = index.encodeKey(doc, this.context)
       if (key === null) return null
 
       const u = this.updates.getIndex(index, key)
-      if (u !== null && checkout === -1) return u.value === null ? null : index.collection.reconstruct(this.version, u.key, u.value)
+      if (u !== null && checkout === -1)
+        return u.value === null
+          ? null
+          : index.collection.reconstruct(this.version, u.key, u.value)
 
       const value = await snap.get(key, checkout, this.activeRequests)
       if (value === null) return null
 
-      return this._getCollection(index.collection, snap, index.reconstruct(key, value), checkout)
+      return this._getCollection(
+        index.collection,
+        snap,
+        index.reconstruct(key, value),
+        checkout
+      )
     } finally {
       if (snap !== null) snap.unref()
     }
   }
 
-  async _getCollection (collection, snap, doc, checkout) {
+  async _getCollection(collection, snap, doc, checkout) {
     maybeClosed(this)
 
     // we allow passing the raw primary key here cause thats what the trigger passes for simplicity
@@ -493,20 +523,30 @@ class HyperDB {
     const key = b4a.isBuffer(doc) ? doc : collection.encodeKey(doc)
 
     const u = this.updates.get(key)
-    const value = (u !== null && checkout === -1) ? u.value : await snap.get(key, checkout, this.activeRequests)
+    const value =
+      u !== null && checkout === -1
+        ? u.value
+        : await snap.get(key, checkout, this.activeRequests)
 
     // check again now cause we did async work above to engine might be nulled out
     maybeClosed(this)
 
-    return this.engine.finalize(collection, this.version, checkout, this.traceable, key, value)
+    return this.engine.finalize(
+      collection,
+      this.version,
+      checkout,
+      this.traceable,
+      key,
+      value
+    )
   }
 
   // TODO: needs to wait for pending inserts/deletes and then lock all future ones whilst it runs
-  _runTrigger (collection, key, doc) {
+  _runTrigger(collection, key, doc) {
     return collection.trigger(this, key, doc, this.context)
   }
 
-  async delete (collectionName, doc) {
+  async delete(collectionName, doc) {
     maybeClosed(this)
 
     if (this.updates.refs > 1) this.updates = this.updates.detach()
@@ -514,7 +554,8 @@ class HyperDB {
     const collection = this.definition.resolveCollection(collectionName)
     if (collection === null) return
 
-    while (this.updates.enter(collection) === false) await this.updates.wait(collection)
+    while (this.updates.enter(collection) === false)
+      await this.updates.wait(collection)
 
     const snap = this.engineSnapshot.ref()
     const key = collection.encodeKey(doc)
@@ -523,7 +564,8 @@ class HyperDB {
 
     try {
       prevValue = await this.engineSnapshot.get(key, -1, this.activeRequests)
-      if (collection.trigger !== null) await this._runTrigger(collection, doc, null)
+      if (collection.trigger !== null)
+        await this._runTrigger(collection, doc, null)
 
       if (prevValue === null) {
         this.updates.delete(key)
@@ -541,7 +583,8 @@ class HyperDB {
 
         u.indexes.push(ups)
 
-        for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
+        for (let j = 0; j < del.length; j++)
+          ups.push({ key: del[j], value: null })
       }
     } finally {
       snap.unref()
@@ -549,15 +592,17 @@ class HyperDB {
     }
   }
 
-  async insert (collectionName, doc, { force = false } = {}) {
+  async insert(collectionName, doc, { force = false } = {}) {
     maybeClosed(this)
 
     if (this.updates.refs > 1) this.updates = this.updates.detach()
 
     const collection = this.definition.resolveCollection(collectionName)
-    if (collection === null) throw new Error('Unknown collection: ' + collectionName)
+    if (collection === null)
+      throw new Error('Unknown collection: ' + collectionName)
 
-    while (this.updates.enter(collection) === false) await this.updates.wait(collection)
+    while (this.updates.enter(collection) === false)
+      await this.updates.wait(collection)
 
     const snap = this.engineSnapshot.ref()
     const key = collection.encodeKey(doc)
@@ -567,7 +612,8 @@ class HyperDB {
 
     try {
       prevValue = await this.engineSnapshot.get(key, -1, this.activeRequests)
-      if (collection.trigger !== null) await this._runTrigger(collection, doc, doc)
+      if (collection.trigger !== null)
+        await this._runTrigger(collection, doc, doc)
 
       const same = prevValue !== null && b4a.equals(value, prevValue)
       if (same && !force) {
@@ -575,7 +621,10 @@ class HyperDB {
         return
       }
 
-      const prevDoc = prevValue === null ? null : collection.reconstruct(this.version, key, prevValue)
+      const prevDoc =
+        prevValue === null
+          ? null
+          : collection.reconstruct(this.version, key, prevValue)
 
       const u = this.updates.update(collection, key, value)
 
@@ -583,7 +632,9 @@ class HyperDB {
 
       for (let i = 0; i < collection.indexes.length; i++) {
         const idx = collection.indexes[i]
-        const prevKeys = prevDoc ? idx.encodeIndexKeys(prevDoc, this.context) : []
+        const prevKeys = prevDoc
+          ? idx.encodeIndexKeys(prevDoc, this.context)
+          : []
         const nextKeys = idx.encodeIndexKeys(doc, this.context)
         const ups = []
 
@@ -592,7 +643,8 @@ class HyperDB {
         const [del, put] = diffKeys(prevKeys, nextKeys)
         const value = put.length === 0 ? null : idx.encodeValue(doc)
 
-        for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
+        for (let j = 0; j < del.length; j++)
+          ups.push({ key: del[j], value: null })
         for (let j = 0; j < put.length; j++) ups.push({ key: put[j], value })
       }
     } finally {
@@ -601,7 +653,7 @@ class HyperDB {
     }
   }
 
-  update () {
+  update() {
     maybeClosed(this)
 
     if (!this.engine.outdated(this.engineSnapshot)) return
@@ -617,34 +669,38 @@ class HyperDB {
     }
   }
 
-  async _flush () {
-    if (this.engine.outdated(this.engineSnapshot)) throw new Error('Database has changed, refusing to commit')
+  async _flush() {
+    if (this.engine.outdated(this.engineSnapshot))
+      throw new Error('Database has changed, refusing to commit')
     if (this.updates.refs > 1) this.updates = this.updates.detach()
 
     await this.engine.commit(this.updates)
 
     this.update()
 
-    if (this.rootInstance !== this && this.rootInstance.updates.size === 0) this.rootInstance.update()
+    if (this.rootInstance !== this && this.rootInstance.updates.size === 0)
+      this.rootInstance.update()
   }
 
-  async flush () {
+  async flush() {
     maybeClosed(this)
 
     if (this.engineSnapshot.opened === false) await this.engineSnapshot.ready()
 
-    if (this.updating > 0) throw new Error('Insert/delete in progress, refusing to commit')
-    if (this.rootInstance === null) throw new Error('Instance is not writable, refusing to commit')
+    if (this.updating > 0)
+      throw new Error('Insert/delete in progress, refusing to commit')
+    if (this.rootInstance === null)
+      throw new Error('Instance is not writable, refusing to commit')
     if (this.updates.size > 0) await this._flush()
     if (this.autoClose === true) await this.close()
   }
 }
 
-function maybeClosed (db) {
+function maybeClosed(db) {
   if (db.closing !== null) throw new Error('Hyperdb is closed')
 }
 
-function withinRange (range, key) {
+function withinRange(range, key) {
   if (range.gte && b4a.compare(range.gte, key) > 0) return false
   if (range.gt && b4a.compare(range.gt, key) >= 0) return false
   if (range.lte && b4a.compare(range.lte, key) < 0) return false
@@ -652,29 +708,29 @@ function withinRange (range, key) {
   return true
 }
 
-function sortKeys (a, b) {
+function sortKeys(a, b) {
   return b4a.compare(a, b)
 }
 
-function sortUpdates (a, b) {
+function sortUpdates(a, b) {
   return a.tick - b.tick // oldest to newest
 }
 
-function compareOverlay (a, b) {
+function compareOverlay(a, b) {
   const c = b4a.compare(a.key, b.key)
   if (c !== 0) return c
   compareHasDups = true
   return b.tick - a.tick
 }
 
-function reverseCompareOverlay (a, b) {
+function reverseCompareOverlay(a, b) {
   const c = b4a.compare(b.key, a.key)
   if (c !== 0) return c
   compareHasDups = true
   return b.tick - a.tick
 }
 
-function diffKeys (a, b) {
+function diffKeys(a, b) {
   if (a.length === 0 || b.length === 0) return [a, b]
 
   // 90% of all indexes
@@ -713,7 +769,7 @@ function diffKeys (a, b) {
   return res
 }
 
-function stripDups (overlay) {
+function stripDups(overlay) {
   let j = 0
 
   for (let i = 0; i < overlay.length; i++) {
@@ -725,7 +781,7 @@ function stripDups (overlay) {
   overlay.length = j
 }
 
-function sortOverlay (overlay, reverse) {
+function sortOverlay(overlay, reverse) {
   compareHasDups = false
   overlay.sort(reverse ? reverseCompareOverlay : compareOverlay)
   if (compareHasDups === true) stripDups(overlay)

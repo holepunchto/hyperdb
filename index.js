@@ -254,11 +254,7 @@ class HyperDB {
   static rocks(storage, definition, options = {}) {
     const readOnly = options.readOnly === true || options.readonly === true
     const trace = options.trace || null
-    return new HyperDB(
-      new RocksEngine(storage, { readOnly, trace }),
-      definition,
-      options
-    )
+    return new HyperDB(new RocksEngine(storage, { readOnly, trace }), definition, options)
   }
 
   static bee(core, definition, options = {}) {
@@ -266,11 +262,7 @@ class HyperDB {
     const autoUpdate = !!options.autoUpdate
     const trace = options.trace || null
 
-    const db = new HyperDB(
-      new BeeEngine(core, { extension, trace }),
-      definition,
-      options
-    )
+    const db = new HyperDB(new BeeEngine(core, { extension, trace }), definition, options)
 
     if (autoUpdate) {
       const update = db.update.bind(db)
@@ -324,9 +316,7 @@ class HyperDB {
   }
 
   ready() {
-    return this.engineSnapshot === null
-      ? Promise.resolve()
-      : this.engineSnapshot.ready()
+    return this.engineSnapshot === null ? Promise.resolve() : this.engineSnapshot.ready()
   }
 
   close() {
@@ -432,18 +422,13 @@ class HyperDB {
 
     const index = this.definition.resolveIndex(indexName)
     const collection =
-      index === null
-        ? this.definition.resolveCollection(indexName)
-        : index.collection
+      index === null ? this.definition.resolveCollection(indexName) : index.collection
 
     if (collection === null) throw new Error('Unknown index: ' + indexName)
 
     const { checkout = -1, limit, reverse = false } = query
 
-    const range =
-      index === null
-        ? collection.encodeKeyRange(query)
-        : index.encodeKeyRange(query)
+    const range = index === null ? collection.encodeKeyRange(query) : index.encodeKeyRange(query)
 
     const overlay =
       checkout !== -1
@@ -485,31 +470,22 @@ class HyperDB {
 
     try {
       const collection = this.definition.resolveCollection(collectionName)
-      if (collection !== null)
-        return await this._getCollection(collection, snap, doc, checkout)
+      if (collection !== null) return await this._getCollection(collection, snap, doc, checkout)
 
       const index = this.definition.resolveIndex(collectionName)
-      if (index === null)
-        throw new Error('Unknown index or collection: ' + collectionName)
+      if (index === null) throw new Error('Unknown index or collection: ' + collectionName)
 
       const key = index.encodeKey(doc, this.context)
       if (key === null) return null
 
       const u = this.updates.getIndex(index, key)
       if (u !== null && checkout === -1)
-        return u.value === null
-          ? null
-          : index.collection.reconstruct(this.version, u.key, u.value)
+        return u.value === null ? null : index.collection.reconstruct(this.version, u.key, u.value)
 
       const value = await snap.get(key, checkout, this.activeRequests)
       if (value === null) return null
 
-      return this._getCollection(
-        index.collection,
-        snap,
-        index.reconstruct(key, value),
-        checkout
-      )
+      return this._getCollection(index.collection, snap, index.reconstruct(key, value), checkout)
     } finally {
       if (snap !== null) snap.unref()
     }
@@ -524,21 +500,12 @@ class HyperDB {
 
     const u = this.updates.get(key)
     const value =
-      u !== null && checkout === -1
-        ? u.value
-        : await snap.get(key, checkout, this.activeRequests)
+      u !== null && checkout === -1 ? u.value : await snap.get(key, checkout, this.activeRequests)
 
     // check again now cause we did async work above to engine might be nulled out
     maybeClosed(this)
 
-    return this.engine.finalize(
-      collection,
-      this.version,
-      checkout,
-      this.traceable,
-      key,
-      value
-    )
+    return this.engine.finalize(collection, this.version, checkout, this.traceable, key, value)
   }
 
   // TODO: needs to wait for pending inserts/deletes and then lock all future ones whilst it runs
@@ -554,8 +521,7 @@ class HyperDB {
     const collection = this.definition.resolveCollection(collectionName)
     if (collection === null) return
 
-    while (this.updates.enter(collection) === false)
-      await this.updates.wait(collection)
+    while (this.updates.enter(collection) === false) await this.updates.wait(collection)
 
     const snap = this.engineSnapshot.ref()
     const key = collection.encodeKey(doc)
@@ -564,8 +530,7 @@ class HyperDB {
 
     try {
       prevValue = await this.engineSnapshot.get(key, -1, this.activeRequests)
-      if (collection.trigger !== null)
-        await this._runTrigger(collection, doc, null)
+      if (collection.trigger !== null) await this._runTrigger(collection, doc, null)
 
       if (prevValue === null) {
         this.updates.delete(key)
@@ -583,8 +548,7 @@ class HyperDB {
 
         u.indexes.push(ups)
 
-        for (let j = 0; j < del.length; j++)
-          ups.push({ key: del[j], value: null })
+        for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
       }
     } finally {
       snap.unref()
@@ -598,11 +562,9 @@ class HyperDB {
     if (this.updates.refs > 1) this.updates = this.updates.detach()
 
     const collection = this.definition.resolveCollection(collectionName)
-    if (collection === null)
-      throw new Error('Unknown collection: ' + collectionName)
+    if (collection === null) throw new Error('Unknown collection: ' + collectionName)
 
-    while (this.updates.enter(collection) === false)
-      await this.updates.wait(collection)
+    while (this.updates.enter(collection) === false) await this.updates.wait(collection)
 
     const snap = this.engineSnapshot.ref()
     const key = collection.encodeKey(doc)
@@ -612,8 +574,7 @@ class HyperDB {
 
     try {
       prevValue = await this.engineSnapshot.get(key, -1, this.activeRequests)
-      if (collection.trigger !== null)
-        await this._runTrigger(collection, doc, doc)
+      if (collection.trigger !== null) await this._runTrigger(collection, doc, doc)
 
       const same = prevValue !== null && b4a.equals(value, prevValue)
       if (same && !force) {
@@ -622,9 +583,7 @@ class HyperDB {
       }
 
       const prevDoc =
-        prevValue === null
-          ? null
-          : collection.reconstruct(this.version, key, prevValue)
+        prevValue === null ? null : collection.reconstruct(this.version, key, prevValue)
 
       const u = this.updates.update(collection, key, value)
 
@@ -632,9 +591,7 @@ class HyperDB {
 
       for (let i = 0; i < collection.indexes.length; i++) {
         const idx = collection.indexes[i]
-        const prevKeys = prevDoc
-          ? idx.encodeIndexKeys(prevDoc, this.context)
-          : []
+        const prevKeys = prevDoc ? idx.encodeIndexKeys(prevDoc, this.context) : []
         const nextKeys = idx.encodeIndexKeys(doc, this.context)
         const ups = []
 
@@ -643,8 +600,7 @@ class HyperDB {
         const [del, put] = diffKeys(prevKeys, nextKeys)
         const value = put.length === 0 ? null : idx.encodeValue(doc)
 
-        for (let j = 0; j < del.length; j++)
-          ups.push({ key: del[j], value: null })
+        for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
         for (let j = 0; j < put.length; j++) ups.push({ key: put[j], value })
       }
     } finally {
@@ -687,10 +643,8 @@ class HyperDB {
 
     if (this.engineSnapshot.opened === false) await this.engineSnapshot.ready()
 
-    if (this.updating > 0)
-      throw new Error('Insert/delete in progress, refusing to commit')
-    if (this.rootInstance === null)
-      throw new Error('Instance is not writable, refusing to commit')
+    if (this.updating > 0) throw new Error('Insert/delete in progress, refusing to commit')
+    if (this.rootInstance === null) throw new Error('Instance is not writable, refusing to commit')
     if (this.updates.size > 0) await this._flush()
     if (this.autoClose === true) await this.close()
   }

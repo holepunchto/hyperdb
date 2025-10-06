@@ -13,16 +13,12 @@ test.bee('basic checkouts', async function ({ create }, t) {
   await db.insert('@db/members', { id: 'someone', age: 41 })
 
   t.alike(await db.find('@db/members').toArray(), [{ id: 'someone', age: 41 }])
-  t.alike(await db.find('@db/members', { checkout }).toArray(), [
-    { id: 'someone', age: 40 }
-  ])
+  t.alike(await db.find('@db/members', { checkout }).toArray(), [{ id: 'someone', age: 40 }])
 
   await db.flush()
 
   t.alike(await db.find('@db/members').toArray(), [{ id: 'someone', age: 41 }])
-  t.alike(await db.find('@db/members', { checkout }).toArray(), [
-    { id: 'someone', age: 40 }
-  ])
+  t.alike(await db.find('@db/members', { checkout }).toArray(), [{ id: 'someone', age: 40 }])
 
   await db.close()
 })

@@ -110,8 +110,7 @@ class Collection extends DBType {
     const fields = []
     const type = '/hyperdb#' + this.id
 
-    if (!schema.isStruct || parents.has(schema))
-      return { external: false, fqn: schema.name }
+    if (!schema.isStruct || parents.has(schema)) return { external: false, fqn: schema.name }
 
     parents.add(schema)
 
@@ -124,12 +123,7 @@ class Collection extends DBType {
       if (primaryKeySet.has(name)) {
         external = cpy.external = true
       } else if (
-        this._deriveValueSchema(
-          f.type,
-          name,
-          primaryKeySet,
-          new Set([...parents])
-        ).external
+        this._deriveValueSchema(f.type, name, primaryKeySet, new Set([...parents])).external
       ) {
         external = true
       }
@@ -189,10 +183,7 @@ class Index extends DBType {
 
     this.map = null
     if (this.isMapped) {
-      this.map =
-        typeof this.key.map === 'function'
-          ? this.key.map.toString()
-          : this.key.map
+      this.map = typeof this.key.map === 'function' ? this.key.map.toString() : this.key.map
     }
 
     // Key encoding will be an IndexEncoder of the secondary index's key fields
@@ -243,10 +234,7 @@ class Index extends DBType {
         ? this.key
         : {
             type: this.key.type,
-            map:
-              typeof this.key.map === 'function'
-                ? this.key.map.toString()
-                : this.key.map
+            map: typeof this.key.map === 'function' ? this.key.map.toString() : this.key.map
           }
     }
   }
@@ -301,11 +289,7 @@ class BuilderNamespace {
 }
 
 class Builder {
-  constructor(
-    schema,
-    dbJson,
-    { offset = 0, dbDir = null, schemaDir = null } = {}
-  ) {
+  constructor(schema, dbJson, { offset = 0, dbDir = null, schemaDir = null } = {}) {
     this.schema = schema
     this.version = dbJson ? dbJson.version : 0
     this.offset = dbJson ? dbJson.offset : offset
@@ -339,9 +323,7 @@ class Builder {
     const unsafe = type.description.unsafe
     if (unsafe) {
       if (unsafe.prefix && !Number.isInteger(unsafe.id)) {
-        throw new Error(
-          'If a type overrides a prefix, it must also specifiy an ID'
-        )
+        throw new Error('If a type overrides a prefix, it must also specifiy an ID')
       }
       if (unsafe.prefix) return { id: unsafe.id, prefix: unsafe.prefix }
     }
@@ -371,8 +353,7 @@ class Builder {
   }
 
   namespace(name, opts) {
-    if (this.namespaces.has(name))
-      throw new Error('Namespace already exists: ' + name)
+    if (this.namespaces.has(name)) throw new Error('Namespace already exists: ' + name)
     const ns = new BuilderNamespace(this, name, opts)
     this.namespaces.set(name, ns)
     return ns
@@ -406,11 +387,9 @@ class Builder {
     fs.writeFileSync(dbJsonPath, JSON.stringify(hyperdb.toJSON(), null, 2), {
       encoding: 'utf-8'
     })
-    fs.writeFileSync(
-      codePath,
-      generateCode(hyperdb, { directory: dbDir, esm }),
-      { encoding: 'utf-8' }
-    )
+    fs.writeFileSync(codePath, generateCode(hyperdb, { directory: dbDir, esm }), {
+      encoding: 'utf-8'
+    })
   }
 
   static from(schemaJson, dbJson, opts) {
@@ -425,8 +404,7 @@ class Builder {
         if (err.code !== 'ENOENT') throw err
       }
       opts = { ...opts, dbDir: dbJson, schemaDir: schemaJson }
-      if (exists)
-        return new this(schema, JSON.parse(fs.readFileSync(jsonFilePath)), opts)
+      if (exists) return new this(schema, JSON.parse(fs.readFileSync(jsonFilePath)), opts)
       return new this(schema, null, opts)
     }
     return new this(schema, dbJson, opts)

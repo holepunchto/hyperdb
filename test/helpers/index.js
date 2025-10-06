@@ -32,8 +32,7 @@ function createTester(type) {
   const make =
     type === 'rocks'
       ? (dir, def, opts = {}) => HyperDB.rocks(dir, def, opts)
-      : (dir, def, opts = {}) =>
-          HyperDB.bee(new Hypercore(dir, opts.key), def, opts)
+      : (dir, def, opts = {}) => HyperDB.bee(new Hypercore(dir, opts.key), def, opts)
 
   const test = runner(brittle)
 
@@ -71,8 +70,7 @@ function creator(t, createHyperDB) {
     // just to help catch leaks
     t.teardown(
       function () {
-        if (!engine.closed)
-          throw new Error('Test has a leak, engine did not close')
+        if (!engine.closed) throw new Error('Test has a leak, engine did not close')
       },
       { order: Infinity }
     )

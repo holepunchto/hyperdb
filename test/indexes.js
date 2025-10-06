@@ -64,9 +64,7 @@ test('two collections work with indexes', async function ({ build }, t) {
   await db.close()
 })
 
-test('two collections work with indexes, one deprecated', async function ({
-  build
-}, t) {
+test('two collections work with indexes, one deprecated', async function ({ build }, t) {
   const db = await build(createExampleDBWithDeprecation)
 
   await db.insert('@example/members', { name: 'test', age: 16 })
@@ -93,11 +91,7 @@ test.bee('force inserts, always inserts', async function ({ build }, t) {
 
   const len = db.core.length
 
-  await db.insert(
-    '@example/members',
-    { name: 'test', age: 16 },
-    { force: true }
-  )
+  await db.insert('@example/members', { name: 'test', age: 16 }, { force: true })
   await db.flush()
 
   t.ok(len < db.core.length)
@@ -105,9 +99,7 @@ test.bee('force inserts, always inserts', async function ({ build }, t) {
   await db.close()
 })
 
-test('index that is smaller than collection has multiple values', async function ({
-  build
-}, t) {
+test('index that is smaller than collection has multiple values', async function ({ build }, t) {
   const db = await build(createExampleDB)
 
   await db.insert('@example/members', { name: 'test-1', age: 16 })

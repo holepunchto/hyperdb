@@ -25,28 +25,20 @@ test('basic snapshot', async function ({ create }, t) {
 
   t.alike(await empty.find('@db/members').toArray(), [])
   t.alike(await db.find('@db/members').toArray(), [{ id: 'someone', age: 41 }])
-  t.alike(await snap.find('@db/members').toArray(), [
-    { id: 'someone', age: 40 }
-  ])
+  t.alike(await snap.find('@db/members').toArray(), [{ id: 'someone', age: 40 }])
 
   await db.flush()
 
   t.alike(await empty.find('@db/members').toArray(), [])
   t.alike(await db.find('@db/members').toArray(), [{ id: 'someone', age: 41 }])
-  t.alike(await snap.find('@db/members').toArray(), [
-    { id: 'someone', age: 40 }
-  ])
+  t.alike(await snap.find('@db/members').toArray(), [{ id: 'someone', age: 40 }])
 
   await empty.close()
 
   t.alike(await db.find('@db/members').toArray(), [{ id: 'someone', age: 41 }])
-  t.alike(await snap.find('@db/members').toArray(), [
-    { id: 'someone', age: 40 }
-  ])
+  t.alike(await snap.find('@db/members').toArray(), [{ id: 'someone', age: 40 }])
 
-  t.alike(await snap.find('@db/members').toArray(), [
-    { id: 'someone', age: 40 }
-  ])
+  t.alike(await snap.find('@db/members').toArray(), [{ id: 'someone', age: 40 }])
 
   await snap.close()
   await db.close()
@@ -102,9 +94,7 @@ test('snap of snap', async function ({ create }, t) {
   await db.close()
 })
 
-test('a divergent tx should not clear the memview', async function ({
-  create
-}, t) {
+test('a divergent tx should not clear the memview', async function ({ create }, t) {
   const db = await create()
 
   await db.insert('@db/members', { id: 'someone', age: 40 })

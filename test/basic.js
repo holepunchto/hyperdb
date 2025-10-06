@@ -11,9 +11,7 @@ test('basic full example', async function ({ create }, t) {
   await db.flush()
 
   {
-    const result = await db
-      .find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } })
-      .toArray()
+    const result = await db.find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }).toArray()
     t.alike(result, [
       { id: 'andrew', age: 34 },
       { id: 'maf', age: 34 }
@@ -24,9 +22,7 @@ test('basic full example', async function ({ create }, t) {
   await db.insert('members', { id: 'maf', age: 37 })
 
   {
-    const result = await db
-      .find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } })
-      .toArray()
+    const result = await db.find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }).toArray()
     t.alike(result, [
       { id: 'andrew', age: 34 },
       { id: 'maf', age: 37 }
@@ -35,11 +31,7 @@ test('basic full example', async function ({ create }, t) {
 
   {
     const result = await db
-      .find(
-        'members/by-age',
-        { gte: { age: 33 }, lt: { age: 99 } },
-        { reverse: true }
-      )
+      .find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }, { reverse: true })
       .toArray()
     t.alike(result, [
       { id: 'maf', age: 37 },
@@ -78,9 +70,7 @@ test('delete record', async function ({ create }, t) {
   }
 
   {
-    const result = await db
-      .find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } })
-      .toArray()
+    const result = await db.find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }).toArray()
     t.alike(result, [{ id: 'andrew', age: 34 }])
   }
 
@@ -92,9 +82,7 @@ test('delete record', async function ({ create }, t) {
   }
 
   {
-    const result = await db
-      .find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } })
-      .toArray()
+    const result = await db.find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }).toArray()
     t.alike(result, [{ id: 'andrew', age: 34 }])
   }
 
@@ -137,11 +125,7 @@ test('generated full example', async function ({ create }, t) {
 
   {
     const result = await db
-      .find(
-        '@db/members-by-age',
-        { gte: { age: 33 }, lt: { age: 99 } },
-        { reverse: true }
-      )
+      .find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }, { reverse: true })
       .toArray()
     t.alike(result, [
       { id: 'maf', age: 37 },

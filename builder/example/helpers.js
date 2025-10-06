@@ -1,6 +1,4 @@
-exports.mapStruct = (record, context) => [
-  { name: record.name, age: record.age }
-]
+exports.mapStruct = (record, context) => [{ name: record.name, age: record.age }]
 
 exports.triggerCollection = async (db, key, record, context) => {
   const info = (await db.get('@example/collection1-info')) || { count: 0 }

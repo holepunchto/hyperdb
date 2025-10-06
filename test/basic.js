@@ -527,7 +527,7 @@ test('exclusive transactions', async function ({ create }, t) {
   await db.close()
 })
 
-test.solo('enum keys', async function ({ create, bee }, t) {
+test('enum keys', async function ({ create, bee }, t) {
   const db = await create({ fixture: 6 })
   const builder = require('./fixtures/generated/6/hyperschema')
   const { NotSpecified, Male, Female } = builder.getEnum('@db/gender')

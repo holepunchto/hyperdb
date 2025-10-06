@@ -55,21 +55,41 @@ test('snap of snap', async function ({ create }, t) {
 
   await db.insert('@db/members', { id: 'baby', age: 1 })
 
-  t.alike(await snap.find('@db/members').toArray(), [{ id: 'else', age: 50 }, { id: 'someone', age: 40 }])
-  t.alike(await snapOfSnap.find('@db/members').toArray(), [{ id: 'else', age: 50 }, { id: 'someone', age: 40 }])
+  t.alike(await snap.find('@db/members').toArray(), [
+    { id: 'else', age: 50 },
+    { id: 'someone', age: 40 }
+  ])
+  t.alike(await snapOfSnap.find('@db/members').toArray(), [
+    { id: 'else', age: 50 },
+    { id: 'someone', age: 40 }
+  ])
 
   await snapOfSnap.close()
 
-  t.alike(await snap.find('@db/members').toArray(), [{ id: 'else', age: 50 }, { id: 'someone', age: 40 }])
+  t.alike(await snap.find('@db/members').toArray(), [
+    { id: 'else', age: 50 },
+    { id: 'someone', age: 40 }
+  ])
 
   await db.flush()
 
-  t.alike(await snap.find('@db/members').toArray(), [{ id: 'else', age: 50 }, { id: 'someone', age: 40 }])
-  t.alike(await db.find('@db/members').toArray(), [{ id: 'baby', age: 1 }, { id: 'else', age: 50 }, { id: 'someone', age: 40 }])
+  t.alike(await snap.find('@db/members').toArray(), [
+    { id: 'else', age: 50 },
+    { id: 'someone', age: 40 }
+  ])
+  t.alike(await db.find('@db/members').toArray(), [
+    { id: 'baby', age: 1 },
+    { id: 'else', age: 50 },
+    { id: 'someone', age: 40 }
+  ])
 
   await snap.close()
 
-  t.alike(await db.find('@db/members').toArray(), [{ id: 'baby', age: 1 }, { id: 'else', age: 50 }, { id: 'someone', age: 40 }])
+  t.alike(await db.find('@db/members').toArray(), [
+    { id: 'baby', age: 1 },
+    { id: 'else', age: 50 },
+    { id: 'someone', age: 40 }
+  ])
 
   await db.close()
 })

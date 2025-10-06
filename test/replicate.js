@@ -118,14 +118,14 @@ test.bee('requests are cleared on close', async function ({ create }, t) {
 
   const unreplicate = replicate(t, clone, db)
 
-  await new Promise(resolve => clone.core.once('append', resolve))
+  await new Promise((resolve) => clone.core.once('append', resolve))
 
   await unreplicate()
 
   const members = clone.get('@db/members', { id: 'someone' })
   const cancelled = t.exception(members, /REQUEST_CANCELLED/)
 
-  await new Promise(resolve => setTimeout(resolve, 10))
+  await new Promise((resolve) => setTimeout(resolve, 10))
 
   await clone.close()
 
@@ -149,7 +149,7 @@ test.bee('requests are cleared on close from unclosed snap', async function ({ c
 
   const unreplicate = replicate(t, clone, db)
 
-  await new Promise(resolve => clone.core.once('append', resolve))
+  await new Promise((resolve) => clone.core.once('append', resolve))
 
   await unreplicate()
 
@@ -157,7 +157,7 @@ test.bee('requests are cleared on close from unclosed snap', async function ({ c
   const members = snap.get('@db/members', { id: 'someone' })
   const cancelled = t.exception(members, /REQUEST_CANCELLED/)
 
-  await new Promise(resolve => setTimeout(resolve, 10))
+  await new Promise((resolve) => setTimeout(resolve, 10))
 
   await clone.close()
 

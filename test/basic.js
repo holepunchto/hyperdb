@@ -30,7 +30,9 @@ test('basic full example', async function ({ create }, t) {
   }
 
   {
-    const result = await db.find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }, { reverse: true }).toArray()
+    const result = await db
+      .find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }, { reverse: true })
+      .toArray()
     t.alike(result, [
       { id: 'maf', age: 37 },
       { id: 'andrew', age: 34 }
@@ -64,32 +66,24 @@ test('delete record', async function ({ create }, t) {
 
   {
     const result = await db.find('members').toArray()
-    t.alike(result, [
-      { id: 'andrew', age: 34 }
-    ])
+    t.alike(result, [{ id: 'andrew', age: 34 }])
   }
 
   {
     const result = await db.find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }).toArray()
-    t.alike(result, [
-      { id: 'andrew', age: 34 }
-    ])
+    t.alike(result, [{ id: 'andrew', age: 34 }])
   }
 
   await db.flush()
 
   {
     const result = await db.find('members').toArray()
-    t.alike(result, [
-      { id: 'andrew', age: 34 }
-    ])
+    t.alike(result, [{ id: 'andrew', age: 34 }])
   }
 
   {
     const result = await db.find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }).toArray()
-    t.alike(result, [
-      { id: 'andrew', age: 34 }
-    ])
+    t.alike(result, [{ id: 'andrew', age: 34 }])
   }
 
   t.alike(await db.get('members', { id: 'maf' }), null)
@@ -107,7 +101,9 @@ test('generated full example', async function ({ create }, t) {
   await db.flush()
 
   {
-    const result = await db.find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }).toArray()
+    const result = await db
+      .find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } })
+      .toArray()
     t.alike(result, [
       { id: 'andrew', age: 34 },
       { id: 'maf', age: 34 }
@@ -118,7 +114,9 @@ test('generated full example', async function ({ create }, t) {
   await db.insert('@db/members', { id: 'maf', age: 37 })
 
   {
-    const result = await db.find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }).toArray()
+    const result = await db
+      .find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } })
+      .toArray()
     t.alike(result, [
       { id: 'andrew', age: 34 },
       { id: 'maf', age: 37 }
@@ -126,7 +124,9 @@ test('generated full example', async function ({ create }, t) {
   }
 
   {
-    const result = await db.find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }, { reverse: true }).toArray()
+    const result = await db
+      .find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }, { reverse: true })
+      .toArray()
     t.alike(result, [
       { id: 'maf', age: 37 },
       { id: 'andrew', age: 34 }
@@ -144,7 +144,10 @@ test('generated full example', async function ({ create }, t) {
 
   t.alike(await db.get('@db/members', { id: 'maf' }), { id: 'maf', age: 37 })
   t.alike(await db.get('@db/members', { id: 'anna' }), { id: 'anna', age: 32 })
-  t.alike(await db.get('@db/members', { id: 'andrew' }), { id: 'andrew', age: 34 })
+  t.alike(await db.get('@db/members', { id: 'andrew' }), {
+    id: 'andrew',
+    age: 34
+  })
 
   await db.close()
 })
@@ -160,36 +163,35 @@ test('generated delete record', async function ({ create }, t) {
 
   {
     const result = await db.find('@db/members').toArray()
-    t.alike(result, [
-      { id: 'andrew', age: 34 }
-    ])
+    t.alike(result, [{ id: 'andrew', age: 34 }])
   }
 
   {
-    const result = await db.find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }).toArray()
-    t.alike(result, [
-      { id: 'andrew', age: 34 }
-    ])
+    const result = await db
+      .find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } })
+      .toArray()
+    t.alike(result, [{ id: 'andrew', age: 34 }])
   }
 
   await db.flush()
 
   {
     const result = await db.find('@db/members').toArray()
-    t.alike(result, [
-      { id: 'andrew', age: 34 }
-    ])
+    t.alike(result, [{ id: 'andrew', age: 34 }])
   }
 
   {
-    const result = await db.find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } }).toArray()
-    t.alike(result, [
-      { id: 'andrew', age: 34 }
-    ])
+    const result = await db
+      .find('@db/members-by-age', { gte: { age: 33 }, lt: { age: 99 } })
+      .toArray()
+    t.alike(result, [{ id: 'andrew', age: 34 }])
   }
 
   t.alike(await db.get('@db/members', { id: 'maf' }), null)
-  t.alike(await db.get('@db/members', { id: 'andrew' }), { id: 'andrew', age: 34 })
+  t.alike(await db.get('@db/members', { id: 'andrew' }), {
+    id: 'andrew',
+    age: 34
+  })
 
   await db.close()
 })
@@ -244,7 +246,7 @@ test('watch', async function ({ create }, t) {
 
   await db.close()
   // hack due to hc releasing something slowly, fix there
-  await new Promise(resolve => setTimeout(resolve, 1000))
+  await new Promise((resolve) => setTimeout(resolve, 1000))
 })
 
 test('basic reopen', async function ({ create }, t) {
@@ -317,8 +319,18 @@ test('changes', async function ({ create }, t) {
   for await (const op of db.changes()) ops.push(op)
 
   t.alike(ops, [
-    { type: 'insert', seq: 2, collection: '@db/members', value: { id: 'andrew', age: 40 } },
-    { type: 'insert', seq: 4, collection: '@db/members', value: { id: 'maf', age: 50 } }
+    {
+      type: 'insert',
+      seq: 2,
+      collection: '@db/members',
+      value: { id: 'andrew', age: 40 }
+    },
+    {
+      type: 'insert',
+      seq: 4,
+      collection: '@db/members',
+      value: { id: 'maf', age: 50 }
+    }
   ])
 
   await db.delete('@db/members', { id: 'andrew' })
@@ -328,16 +340,36 @@ test('changes', async function ({ create }, t) {
   for await (const op of db.changes()) ops.push(op)
 
   t.alike(ops, [
-    { type: 'insert', seq: 2, collection: '@db/members', value: { id: 'andrew', age: 40 } },
-    { type: 'insert', seq: 4, collection: '@db/members', value: { id: 'maf', age: 50 } },
-    { type: 'delete', seq: 6, collection: '@db/members', value: { id: 'andrew' } }
+    {
+      type: 'insert',
+      seq: 2,
+      collection: '@db/members',
+      value: { id: 'andrew', age: 40 }
+    },
+    {
+      type: 'insert',
+      seq: 4,
+      collection: '@db/members',
+      value: { id: 'maf', age: 50 }
+    },
+    {
+      type: 'delete',
+      seq: 6,
+      collection: '@db/members',
+      value: { id: 'andrew' }
+    }
   ])
 
   ops = []
   for await (const op of db.changes({ gt: 4 })) ops.push(op)
 
   t.alike(ops, [
-    { type: 'delete', seq: 6, collection: '@db/members', value: { id: 'andrew' } }
+    {
+      type: 'delete',
+      seq: 6,
+      collection: '@db/members',
+      value: { id: 'andrew' }
+    }
   ])
 
   await db.close()
@@ -364,8 +396,14 @@ test('update does not break existing snaps', async function ({ create }, t) {
 test('nested keys', async function ({ create, bee }, t) {
   const db = await create({ fixture: 4 })
 
-  await db.insert('@db/nested-members', { member: { id: 'maf', age: 50 }, fun: true })
-  await db.insert('@db/nested-members', { member: { id: 'andrew', age: 40 }, fun: false })
+  await db.insert('@db/nested-members', {
+    member: { id: 'maf', age: 50 },
+    fun: true
+  })
+  await db.insert('@db/nested-members', {
+    member: { id: 'andrew', age: 40 },
+    fun: false
+  })
 
   await db.flush()
 
@@ -384,22 +422,26 @@ test('nested keys', async function ({ create, bee }, t) {
     const ops = []
     for await (const op of db.changes()) ops.push(op)
 
-    t.alike(ops, [{
-      type: 'insert',
-      seq: 1,
-      collection: '@db/nested-members',
-      value: { member: { id: 'andrew', age: 40 }, fun: false }
-    }, {
-      type: 'insert',
-      seq: 2,
-      collection: '@db/nested-members',
-      value: { member: { id: 'maf', age: 50 }, fun: true }
-    }, {
-      type: 'delete',
-      seq: 3,
-      collection: '@db/nested-members',
-      value: { member: { id: 'andrew' } }
-    }])
+    t.alike(ops, [
+      {
+        type: 'insert',
+        seq: 1,
+        collection: '@db/nested-members',
+        value: { member: { id: 'andrew', age: 40 }, fun: false }
+      },
+      {
+        type: 'insert',
+        seq: 2,
+        collection: '@db/nested-members',
+        value: { member: { id: 'maf', age: 50 }, fun: true }
+      },
+      {
+        type: 'delete',
+        seq: 3,
+        collection: '@db/nested-members',
+        value: { member: { id: 'andrew' } }
+      }
+    ])
   }
 
   await db.close()
@@ -429,17 +471,23 @@ test('basic example with booleans', async function ({ create }, t) {
   await db.flush()
 
   {
-    const result = await db.find('@db/members-by-present', { gte: { present: true }, lte: { present: true } }).toArray()
-    t.alike(result, [
-      { id: 'maf', present: true }
-    ])
+    const result = await db
+      .find('@db/members-by-present', {
+        gte: { present: true },
+        lte: { present: true }
+      })
+      .toArray()
+    t.alike(result, [{ id: 'maf', present: true }])
   }
 
   {
-    const result = await db.find('@db/members-by-present', { gte: { present: false }, lte: { present: false } }).toArray()
-    t.alike(result, [
-      { id: 'andrew', present: false }
-    ])
+    const result = await db
+      .find('@db/members-by-present', {
+        gte: { present: false },
+        lte: { present: false }
+      })
+      .toArray()
+    t.alike(result, [{ id: 'andrew', present: false }])
   }
 
   await db.close()
@@ -466,7 +514,7 @@ test('read tracing', async function ({ create }, t) {
 
   await db.close()
 
-  function trace (collection, record) {
+  function trace(collection, record) {
     collections.add(collection)
     names.add(record.id)
   }
@@ -499,7 +547,7 @@ test('no read tracing on transactions', async function ({ create }, t) {
 
   await db.close()
 
-  function trace (collection, record) {
+  function trace(collection, record) {
     collections.add(collection)
     names.add(record.id)
   }

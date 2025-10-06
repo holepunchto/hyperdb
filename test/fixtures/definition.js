@@ -4,18 +4,20 @@ const c = require('compact-encoding')
 const IndexEncoder = require('index-encoder')
 
 const memberKey = new IndexEncoder([IndexEncoder.STRING], { prefix: 0 })
-const memberByAge = new IndexEncoder([IndexEncoder.UINT, IndexEncoder.STRING], { prefix: 1 })
+const memberByAge = new IndexEncoder([IndexEncoder.UINT, IndexEncoder.STRING], {
+  prefix: 1
+})
 
 const struct = {
-  preencode (state, doc) {
+  preencode(state, doc) {
     c.string.preencode(state, doc.id)
     c.uint.preencode(state, doc.age)
   },
-  encode (state, doc) {
+  encode(state, doc) {
     c.string.encode(state, doc.id)
     c.uint.encode(state, doc.age)
   },
-  decode (state) {
+  decode(state) {
     return { id: c.string.decode(state), age: c.uint.decode(state) }
   }
 }
@@ -25,16 +27,16 @@ const membersCollection = {
   stats: false,
   id: 0,
   trigger: null,
-  encodeKey (doc) {
+  encodeKey(doc) {
     return memberKey.encode([doc.id])
   },
-  encodeKeyRange (range) {
+  encodeKeyRange(range) {
     return memberKey.encodeRange({}) // fix later
   },
-  encodeValue (version, doc) {
+  encodeValue(version, doc) {
     return c.encode(struct, doc)
   },
-  reconstruct (version, keyBuffer, valueBuffer) {
+  reconstruct(version, keyBuffer, valueBuffer) {
     return c.decode(struct, valueBuffer)
   },
   indexes: []
@@ -45,13 +47,13 @@ const membersByAgeIndex = {
   offset: 0,
   stats: false,
   id: 1,
-  encodeKey (doc) {
+  encodeKey(doc) {
     return memberByAge.encode([doc.age, doc.id])
   },
-  encodeIndexKeys (doc) {
+  encodeIndexKeys(doc) {
     return [memberByAge.encode([doc.age, doc.id])]
   },
-  encodeKeyRange (range) {
+  encodeKeyRange(range) {
     const r = {
       gt: null,
       gte: null,
@@ -76,10 +78,10 @@ const membersByAgeIndex = {
 
     return memberByAge.encodeRange(r)
   },
-  encodeValue (doc) {
+  encodeValue(doc) {
     return membersCollection.encodeKey(doc)
   },
-  reconstruct (keyBuf, valueBuf) {
+  reconstruct(keyBuf, valueBuf) {
     return valueBuf
   },
   collection: membersCollection
@@ -89,11 +91,11 @@ membersCollection.indexes.push(membersByAgeIndex)
 
 module.exports = {
   version: 0,
-  resolveCollection (name) {
+  resolveCollection(name) {
     if (name === membersCollection.name) return membersCollection
     return null
   },
-  resolveIndex (name) {
+  resolveIndex(name) {
     if (name === membersByAgeIndex.name) return membersByAgeIndex
     return null
   }

@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "schema": [
+    {
+      "name": "gender",
+      "namespace": "db",
+      "offset": 1,
+      "enum": [
+        {
+          "key": "NotSpecified",
+          "version": 1
+        },
+        {
+          "key": "Male",
+          "version": 1
+        },
+        {
+          "key": "Female",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "member",
+      "namespace": "db",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "gender",
+          "required": true,
+          "type": "@db/gender",
+          "version": 1
+        }
+      ]
+    }
+  ]
+}

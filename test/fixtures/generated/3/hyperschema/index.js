@@ -2,26 +2,28 @@
 // Schema Version: 1
 /* eslint-disable camelcase */
 /* eslint-disable quotes */
+/* eslint-disable space-before-function-paren */
+
+const { c } = require('hyperschema/runtime')
 
 const VERSION = 1
-const { c } = require('hyperschema/runtime')
 
 // eslint-disable-next-line no-unused-vars
 let version = VERSION
 
 // @db/member
 const encoding0 = {
-  preencode (state, m) {
+  preencode(state, m) {
     c.none.preencode(state, m.key)
     c.string.preencode(state, m.id)
     c.uint.preencode(state, m.age)
   },
-  encode (state, m) {
+  encode(state, m) {
     c.none.encode(state, m.key)
     c.string.encode(state, m.id)
     c.uint.encode(state, m.age)
   },
-  decode (state) {
+  decode(state) {
     const r0 = c.none.decode(state)
     const r1 = c.string.decode(state)
     const r2 = c.uint.decode(state)
@@ -34,43 +36,63 @@ const encoding0 = {
   }
 }
 
-function setVersion (v) {
+function setVersion(v) {
   version = v
 }
 
-function encode (name, value, v = VERSION) {
+function encode(name, value, v = VERSION) {
   version = v
   return c.encode(getEncoding(name), value)
 }
 
-function decode (name, buffer, v = VERSION) {
+function decode(name, buffer, v = VERSION) {
   version = v
   return c.decode(getEncoding(name), buffer)
 }
 
-function getEncoding (name) {
+function getEnum(name) {
   switch (name) {
-    case '@db/member': return encoding0
-    default: throw new Error('Encoder not found ' + name)
+    default:
+      throw new Error('Enum not found ' + name)
   }
 }
 
-function resolveStruct (name, v = VERSION) {
+function getEncoding(name) {
+  switch (name) {
+    case '@db/member':
+      return encoding0
+    default:
+      throw new Error('Encoder not found ' + name)
+  }
+}
+
+function getStruct(name, v = VERSION) {
   const enc = getEncoding(name)
   return {
-    preencode (state, m) {
+    preencode(state, m) {
       version = v
       enc.preencode(state, m)
     },
-    encode (state, m) {
+    encode(state, m) {
       version = v
       enc.encode(state, m)
     },
-    decode (state) {
+    decode(state) {
       version = v
       return enc.decode(state)
     }
   }
 }
 
-module.exports = { resolveStruct, getEncoding, encode, decode, setVersion, version }
+const resolveStruct = getStruct // compat
+
+module.exports = {
+  resolveStruct,
+  getStruct,
+  getEnum,
+  getEncoding,
+  encode,
+  decode,
+  setVersion,
+  version
+}

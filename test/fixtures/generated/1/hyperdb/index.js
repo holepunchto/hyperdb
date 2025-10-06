@@ -2,7 +2,6 @@
 /* eslint-disable camelcase */
 
 const { IndexEncoder, c } = require('hyperdb/runtime')
-
 const { version, getEncoding, setVersion } = require('./messages.js')
 
 // '@db/members' collection key
@@ -105,17 +104,15 @@ const index1 = {
 }
 collection0.indexes.push(index1)
 
-module.exports = {
-  version,
-  collections: [
-    collection0
-  ],
-  indexes: [
-    index1
-  ],
-  resolveCollection,
-  resolveIndex
-}
+const collections = [
+  collection0
+]
+
+const indexes = [
+  index1
+]
+
+module.exports = { version, collections, indexes, resolveCollection, resolveIndex }
 
 function resolveCollection (name) {
   switch (name) {

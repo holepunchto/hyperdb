@@ -526,3 +526,25 @@ test('exclusive transactions', async function ({ create }, t) {
 
   await db.close()
 })
+
+test.solo('enum keys', async function ({ create, bee }, t) {
+  const db = await create({ fixture: 6 })
+  const builder = require('./fixtures/generated/6/hyperschema')
+  const { NotSpecified, Male, Female } = builder.getEnum('@db/gender')
+
+  await db.insert('@db/members', { name: 'Doe', gender: NotSpecified })
+  await db.insert('@db/members', { name: 'John', gender: Male })
+  await db.insert('@db/members', { name: 'Jane', gender: Female })
+  await db.flush()
+
+  {
+    const john = await db.get('@db/members', { name: 'John', gender: Male })
+    t.alike(john, { name: 'John', gender: Male })
+  }
+  {
+    const females = await db.find('@db/members-by-gender', { lte: { gender: Female }, gte: { gender: Female } }).toArray()
+    t.alike(females, [{ name: 'Jane', gender: Female }])
+  }
+
+  await db.close()
+})

@@ -22,8 +22,8 @@ class Updates {
 
   enter (collection) {
     if (collection.trigger !== null) {
-      if (this.locks.has(collection)) return false
-      this.locks.set(collection, { resolve: null, promise: null })
+      if (this.locks.has(collection.id)) return false
+      this.locks.set(collection.id, { resolve: null, promise: null })
     }
 
     this.mutating++
@@ -33,13 +33,13 @@ class Updates {
   exit (collection) {
     this.mutating--
     if (collection.trigger === null) return
-    const { resolve } = this.locks.get(collection)
-    this.locks.delete(collection)
+    const { resolve } = this.locks.get(collection.id)
+    this.locks.delete(collection.id)
     if (resolve) resolve()
   }
 
   wait (collection) {
-    const state = this.locks.get(collection)
+    const state = this.locks.get(collection.id)
     if (state.promise) return state.promise
     state.promise = new Promise((resolve) => { state.resolve = resolve })
     return state.promise
@@ -88,7 +88,7 @@ class Updates {
     const matches = []
 
     for (const u of this.map.values()) {
-      if (u.collection !== index.collection) continue
+      if (u.collection.id !== index.collection.id) continue
 
       const ups = u.indexes[index.offset]
 
@@ -179,7 +179,7 @@ class Updates {
     if (this.map.size === 0) return overlay
 
     for (const u of this.map.values()) {
-      if (u.collection !== collection) continue
+      if (u.collection.id !== collection.id) continue
       if (withinRange(range, u.key)) {
         overlay.push({
           tick: u.tick,
@@ -201,7 +201,7 @@ class Updates {
     const collection = index.collection
 
     for (const u of this.map.values()) {
-      if (u.collection !== collection) continue
+      if (u.collection.id !== collection.id) continue
       for (const { key, value } of u.indexes[index.offset]) {
         if (withinRange(range, key)) {
           overlay.push({

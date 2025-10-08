@@ -589,7 +589,7 @@ class HyperDB {
 
         u.indexes.push(ups)
 
-        const [del, put] = diffKeys(prevKeys, nextKeys)
+        const [del, put] = diffKeys(prevKeys, nextKeys, force)
         const value = put.length === 0 ? null : idx.encodeValue(doc)
 
         for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
@@ -674,12 +674,12 @@ function reverseCompareOverlay (a, b) {
   return b.tick - a.tick
 }
 
-function diffKeys (a, b) {
+function diffKeys (a, b, force) {
   if (a.length === 0 || b.length === 0) return [a, b]
 
   // 90% of all indexes
   if (a.length === 1 && b.length === 1) {
-    return b4a.equals(a[0], b[0]) ? [[], []] : [a, b]
+    return b4a.equals(a[0], b[0]) ? (force ? [[], b] : [[], []]) : [a, b]
   }
 
   a.sort(sortKeys)
@@ -694,6 +694,7 @@ function diffKeys (a, b) {
       const cmp = b4a.compare(a[ai], b[bi])
 
       if (cmp === 0) {
+        if (force) res[1].push(b[bi])
         ai++
         bi++
       } else if (cmp < 0) {

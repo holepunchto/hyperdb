@@ -22,8 +22,8 @@ class Updates {
 
   enter (collection) {
     if (collection.trigger !== null) {
-      if (this.locks.has(collection)) return false
-      this.locks.set(collection, { resolve: null, promise: null })
+      if (this.locks.has(collection.id)) return false
+      this.locks.set(collection.id, { resolve: null, promise: null })
     }
 
     this.mutating++
@@ -33,13 +33,13 @@ class Updates {
   exit (collection) {
     this.mutating--
     if (collection.trigger === null) return
-    const { resolve } = this.locks.get(collection)
-    this.locks.delete(collection)
+    const { resolve } = this.locks.get(collection.id)
+    this.locks.delete(collection.id)
     if (resolve) resolve()
   }
 
   wait (collection) {
-    const state = this.locks.get(collection)
+    const state = this.locks.get(collection.id)
     if (state.promise) return state.promise
     state.promise = new Promise((resolve) => { state.resolve = resolve })
     return state.promise
@@ -88,7 +88,7 @@ class Updates {
     const matches = []
 
     for (const u of this.map.values()) {
-      if (u.collection !== index.collection) continue
+      if (u.collection.id !== index.collection.id) continue
 
       const ups = u.indexes[index.offset]
 
@@ -179,7 +179,7 @@ class Updates {
     if (this.map.size === 0) return overlay
 
     for (const u of this.map.values()) {
-      if (u.collection !== collection) continue
+      if (u.collection.id !== collection.id) continue
       if (withinRange(range, u.key)) {
         overlay.push({
           tick: u.tick,
@@ -201,7 +201,7 @@ class Updates {
     const collection = index.collection
 
     for (const u of this.map.values()) {
-      if (u.collection !== collection) continue
+      if (u.collection.id !== collection.id) continue
       for (const { key, value } of u.indexes[index.offset]) {
         if (withinRange(range, key)) {
           overlay.push({
@@ -569,8 +569,7 @@ class HyperDB {
       prevValue = await this.engineSnapshot.get(key, -1, this.activeRequests)
       if (collection.trigger !== null) await this._runTrigger(collection, doc, doc)
 
-      const same = prevValue !== null && b4a.equals(value, prevValue)
-      if (same && !force) {
+      if (!force && prevValue !== null && b4a.equals(value, prevValue)) {
         this.updates.delete(key)
         return
       }
@@ -589,7 +588,7 @@ class HyperDB {
 
         u.indexes.push(ups)
 
-        const [del, put] = diffKeys(prevKeys, nextKeys)
+        const [del, put] = diffKeys(prevKeys, nextKeys, force)
         const value = put.length === 0 ? null : idx.encodeValue(doc)
 
         for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
@@ -674,12 +673,12 @@ function reverseCompareOverlay (a, b) {
   return b.tick - a.tick
 }
 
-function diffKeys (a, b) {
+function diffKeys (a, b, force) {
   if (a.length === 0 || b.length === 0) return [a, b]
 
   // 90% of all indexes
   if (a.length === 1 && b.length === 1) {
-    return b4a.equals(a[0], b[0]) ? [[], []] : [a, b]
+    return b4a.equals(a[0], b[0]) ? (force ? [[], b] : [[], []]) : [a, b]
   }
 
   a.sort(sortKeys)
@@ -694,6 +693,7 @@ function diffKeys (a, b) {
       const cmp = b4a.compare(a[ai], b[bi])
 
       if (cmp === 0) {
+        if (force) res[1].push(b[bi])
         ai++
         bi++
       } else if (cmp < 0) {

@@ -11,41 +11,43 @@ const VERSION = 1
 // eslint-disable-next-line no-unused-vars
 let version = VERSION
 
-// @db/member
-const encoding0 = {
-  preencode(state, m) {
-    c.string.preencode(state, m.id)
-    c.uint.preencode(state, m.age)
-  },
-  encode(state, m) {
-    c.string.encode(state, m.id)
-    c.uint.encode(state, m.age)
-  },
-  decode(state) {
-    const r0 = c.string.decode(state)
-    const r1 = c.uint.decode(state)
+const encoding0_enum = {
+  NotSpecified: 1,
+  Male: 2,
+  Female: 3
+}
 
-    return {
-      id: r0,
-      age: r1
-    }
+// @db/gender enum
+const encoding0 = {
+  preencode (state, m) {
+    state.end++ // max enum is 3 so always one byte
+  },
+  encode (state, m) {
+    if (m > 3) throw new Error('Unknown enum')
+    c.uint.encode(state, m)
+  },
+  decode (state) {
+    return c.uint.decode(state)
   }
 }
 
-// @db/member/hyperdb#0
+// @db/member
 const encoding1 = {
   preencode(state, m) {
-    c.uint.preencode(state, m.age)
+    c.string.preencode(state, m.name)
+    encoding0.preencode(state, m.gender)
   },
   encode(state, m) {
-    c.uint.encode(state, m.age)
+    c.string.encode(state, m.name)
+    encoding0.encode(state, m.gender)
   },
   decode(state) {
-    const r1 = c.uint.decode(state)
+    const r0 = c.string.decode(state)
+    const r1 = encoding0.decode(state)
 
     return {
-      id: null,
-      age: r1
+      name: r0,
+      gender: r1
     }
   }
 }
@@ -66,6 +68,8 @@ function decode(name, buffer, v = VERSION) {
 
 function getEnum(name) {
   switch (name) {
+    case '@db/gender':
+      return encoding0_enum
     default:
       throw new Error('Enum not found ' + name)
   }
@@ -73,9 +77,9 @@ function getEnum(name) {
 
 function getEncoding(name) {
   switch (name) {
-    case '@db/member':
+    case '@db/gender':
       return encoding0
-    case '@db/member/hyperdb#0':
+    case '@db/member':
       return encoding1
     default:
       throw new Error('Encoder not found ' + name)

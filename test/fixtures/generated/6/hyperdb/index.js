@@ -6,18 +6,18 @@ const { version, getEncoding, setVersion } = require('./messages.js')
 
 // '@db/members' collection key
 const collection0_key = new IndexEncoder([
-  undefined,
-  IndexEncoder.STRING
+  IndexEncoder.STRING,
+  IndexEncoder.UINT
 ], { prefix: 0 })
 
 function collection0_indexify (record) {
   const arr = []
 
-  const a0 = record.key
+  const a0 = record.name
   if (a0 === undefined) return arr
   arr.push(a0)
 
-  const a1 = record.id
+  const a1 = record.gender
   if (a1 === undefined) return arr
   arr.push(a1)
 
@@ -32,16 +32,16 @@ function collection0_reconstruct (version, keyBuf, valueBuf) {
   const key = collection0_key.decode(keyBuf)
   setVersion(version)
   const record = c.decode(collection0_enc, valueBuf)
-  record.key = key[0]
-  record.id = key[1]
+  record.name = key[0]
+  record.gender = key[1]
   return record
 }
 // '@db/members' key reconstruction function
 function collection0_reconstruct_key (keyBuf) {
   const key = collection0_key.decode(keyBuf)
   return {
-    key: key[0],
-    id: key[1]
+    name: key[0],
+    gender: key[1]
   }
 }
 
@@ -50,7 +50,7 @@ const collection0 = {
   name: '@db/members',
   id: 0,
   encodeKey (record) {
-    const key = [record.key, record.id]
+    const key = [record.name, record.gender]
     return collection0_key.encode(key)
   },
   encodeKeyRange ({ gt, lt, gte, lte } = {}) {
@@ -71,39 +71,34 @@ const collection0 = {
   indexes: []
 }
 
-// '@db/members-by-age' collection key
+// '@db/members-by-gender' collection key
 const index1_key = new IndexEncoder([
-  undefined,
   IndexEncoder.UINT,
-  undefined,
-  IndexEncoder.STRING
+  IndexEncoder.STRING,
+  IndexEncoder.UINT
 ], { prefix: 1 })
 
 function index1_indexify (record) {
   const arr = []
 
-  const a0 = record.key
+  const a0 = record.gender
   if (a0 === undefined) return arr
   arr.push(a0)
 
-  const a1 = record.age
+  const a1 = record.name
   if (a1 === undefined) return arr
   arr.push(a1)
 
-  const a2 = record.key
+  const a2 = record.gender
   if (a2 === undefined) return arr
   arr.push(a2)
-
-  const a3 = record.id
-  if (a3 === undefined) return arr
-  arr.push(a3)
 
   return arr
 }
 
-// '@db/members-by-age'
+// '@db/members-by-gender'
 const index1 = {
-  name: '@db/members-by-age',
+  name: '@db/members-by-gender',
   id: 1,
   encodeKey (record) {
     return index1_key.encode(index1_indexify(record))
@@ -118,7 +113,7 @@ const index1 = {
   },
   encodeValue: (doc) => index1.collection.encodeKey(doc),
   encodeIndexKeys (record, context) {
-    return [index1_key.encode([record.key, record.age, record.key, record.id])]
+    return [index1_key.encode([record.gender, record.name, record.gender])]
   },
   reconstruct: (keyBuf, valueBuf) => valueBuf,
   offset: collection0.indexes.length,
@@ -145,7 +140,7 @@ function resolveCollection (name) {
 
 function resolveIndex (name) {
   switch (name) {
-    case '@db/members-by-age': return index1
+    case '@db/members-by-gender': return index1
     default: return null
   }
 }

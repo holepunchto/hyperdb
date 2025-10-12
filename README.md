@@ -379,7 +379,7 @@ exports.membersTrigger = async function (db, key, record) {
 }
 
 // schema.js
-db.register('./helpers.js')
+db.require('./helpers.js')
 
 db.collections.register({
   name: 'members-digest',
@@ -435,7 +435,7 @@ exports.keyMap = (record, context) => [
 
 // schema.js
 // ... Defining db, it's collections
-db.register('./helpers.js')
+db.require('./helpers.js')
 db.indexes.register({
   name: 'mapped-index',
   collection: '@ns/collection',

@@ -3,7 +3,7 @@ const { test } = require('./helpers')
 const tmp = require('test-tmp')
 const path = require('path')
 
-test.bee('basic checkouts', async function ({ build }, t) {
+test.bee('open schema from dir', async function ({ build }, t) {
   const dir = await tmp(t, { dir: path.join(__dirname, './fixtures/tmp') })
   const db = await build(createExampleDB, { dir })
 

@@ -287,6 +287,14 @@ class Builder {
 
     this.initializing = true
     if (dbJson) {
+      if (dbJson.namespaces) {
+        for (let i = 0; i < dbJson.namespaces.length; i++) {
+          const namespace = dbJson.namespaces[i]
+          const { name, ...opts } = namespace
+          this.namespace(name, opts)
+        }
+      }
+
       for (let i = 0; i < dbJson.schema.length; i++) {
         const description = dbJson.schema[i]
         if (description.type === COLLECTION_TYPE) {
@@ -345,7 +353,8 @@ class Builder {
     return {
       version: this.version,
       offset: this.offset,
-      schema: this.orderedTypes.map(t => t.toJSON())
+      schema: this.orderedTypes.map((t) => t.toJSON()),
+      namespaces: [...this.namespaces.values()].map((ns) => ns.toJSON())
     }
   }
 

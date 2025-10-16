@@ -68,7 +68,5 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
     trigger: 'triggerCountMembers'
   })
 
-  console.log('V1', db)
-
   HyperDB.toDisk(db)
 }

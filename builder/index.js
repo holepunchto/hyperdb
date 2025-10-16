@@ -35,8 +35,11 @@ class DBType {
     }
   }
 
-  getNamespace () {
-    return this.builder.namespaces.get(this.namespace)
+  getNamespace() {
+    return (
+      this.builder.namespaces.get(this.namespace) ||
+      this.builder.loadedNamespaces.get(this.namespace)
+    );
   }
 
   _resolveKey (schema, path) {
@@ -279,6 +282,7 @@ class Builder {
     this.schemaDir = schemaDir
 
     this.namespaces = new Map()
+    this.loadedNamespaces = new Map()
     this.typesByName = new Map()
     this.typesById = new Map()
     this.orderedTypes = []
@@ -287,14 +291,6 @@ class Builder {
 
     this.initializing = true
     if (dbJson) {
-      if (dbJson.namespaces) {
-        for (let i = 0; i < dbJson.namespaces.length; i++) {
-          const namespace = dbJson.namespaces[i]
-          const { name, ...opts } = namespace
-          this.namespace(name, opts)
-        }
-      }
-
       for (let i = 0; i < dbJson.schema.length; i++) {
         const description = dbJson.schema[i]
         if (description.type === COLLECTION_TYPE) {
@@ -303,11 +299,29 @@ class Builder {
           this.registerIndex(description, description.namespace)
         }
       }
+
+      this._loadStartingNamespaces()
     }
     this.initializing = false
   }
 
   static esm = false
+
+  _loadStartingNamespaces () {
+    for (let i = 0; i < this.schema.schema.length; i++) {
+      const s = this.schema.schema[i]
+      if (!s.name.includes('/hyperdb#')) {
+        continue
+      }
+
+      if (!this.loadedNamespaces.has(s.namespace)) {
+        this.loadedNamespaces.set(
+          s.namespace,
+          new BuilderNamespace(this, s.namespace)
+        )
+      }
+    }
+  }
 
   _assignId (type) {
     const unsafe = type.description.unsafe
@@ -353,8 +367,7 @@ class Builder {
     return {
       version: this.version,
       offset: this.offset,
-      schema: this.orderedTypes.map((t) => t.toJSON()),
-      namespaces: [...this.namespaces.values()].map((ns) => ns.toJSON())
+      schema: this.orderedTypes.map((t) => t.toJSON())
     }
   }
 

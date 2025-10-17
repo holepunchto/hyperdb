@@ -35,11 +35,11 @@ class DBType {
     }
   }
 
-  getNamespace() {
+  getNamespace () {
     return (
       this.builder.namespaces.get(this.namespace) ||
       this.builder.loadedNamespaces.get(this.namespace)
-    );
+    )
   }
 
   _resolveKey (schema, path) {
@@ -52,7 +52,9 @@ class DBType {
       current = field.type
     }
 
-    const resolved = this.builder.schema.resolve(current.fqn, { aliases: false })
+    const resolved = this.builder.schema.resolve(current.fqn, {
+      aliases: false
+    })
     if (!resolved) throw new Error('Could not resolve path: ' + path)
 
     return resolved
@@ -76,11 +78,16 @@ class Collection extends DBType {
     this.indexes = []
 
     this.schema = this.builder.schema.resolve(description.schema)
-    if (!this.schema) throw new Error('Schema not found: ' + description.schema)
+    if (!this.schema) {
+      throw new Error('Schema not found: ' + description.schema)
+    }
 
     this.key = description.key || []
     this.fullKey = this.key
-    this.trigger = (typeof description.trigger === 'function') ? description.trigger.toString() : (description.trigger || null)
+    this.trigger =
+      typeof description.trigger === 'function'
+        ? description.trigger.toString()
+        : description.trigger || null
 
     this.keyEncoding = []
 
@@ -88,7 +95,9 @@ class Collection extends DBType {
       for (const component of this.key) {
         const field = resolvePathToType(component, this.schema)
         if (!field) throw new Error('Field not found: ' + component)
-        const resolvedType = this.builder.schema.resolve(field.type.fqn, { aliases: false })
+        const resolvedType = this.builder.schema.resolve(field.type.fqn, {
+          aliases: false
+        })
         this.keyEncoding.push(resolvedType.name)
       }
     }
@@ -97,11 +106,18 @@ class Collection extends DBType {
     this.valueEncoding = this._deriveValueSchema().fqn
   }
 
-  _deriveValueSchema (schema = this.schema, prefix = '', primaryKeySet = new Set(this.key), parents = new Set()) {
+  _deriveValueSchema (
+    schema = this.schema,
+    prefix = '',
+    primaryKeySet = new Set(this.key),
+    parents = new Set()
+  ) {
     const fields = []
     const type = '/hyperdb#' + this.id
 
-    if (!schema.isStruct || parents.has(schema)) return { external: false, fqn: schema.name }
+    if (!schema.isStruct || parents.has(schema)) {
+      return { external: false, fqn: schema.name }
+    }
 
     parents.add(schema)
 
@@ -113,7 +129,14 @@ class Collection extends DBType {
 
       if (primaryKeySet.has(name)) {
         external = cpy.external = true
-      } else if (this._deriveValueSchema(f.type, name, primaryKeySet, new Set([...parents])).external) {
+      } else if (
+        this._deriveValueSchema(
+          f.type,
+          name,
+          primaryKeySet,
+          new Set([...parents])
+        ).external
+      ) {
         external = true
       }
 
@@ -133,14 +156,17 @@ class Collection extends DBType {
       fields
     })
 
-    return { external: true, fqn: getFQN(schema.namespace, schema.name + type) }
+    return {
+      external: true,
+      fqn: getFQN(schema.namespace, schema.name + type)
+    }
   }
 
   toJSON () {
     return {
       ...super.toJSON(),
       type: COLLECTION_TYPE,
-      indexes: this.indexes.map(i => i.fqn),
+      indexes: this.indexes.map((i) => i.fqn),
       schema: this.schema.fqn,
       derived: this.derived,
       key: this.key,
@@ -172,7 +198,10 @@ class Index extends DBType {
 
     this.map = null
     if (this.isMapped) {
-      this.map = (typeof this.key.map === 'function') ? this.key.map.toString() : this.key.map
+      this.map =
+        typeof this.key.map === 'function'
+          ? this.key.map.toString()
+          : this.key.map
     }
 
     // Key encoding will be an IndexEncoder of the secondary index's key fields
@@ -181,17 +210,24 @@ class Index extends DBType {
     if (Array.isArray(this.key)) {
       this.fullKey = [...this.key]
       for (const component of this.key) {
-        const resolvedType = this._resolveKey(this.collection.schema, component)
+        const resolvedType = this._resolveKey(
+          this.collection.schema,
+          component
+        )
         this.keyEncoding.push(resolvedType.name)
       }
     } else if (typeof this.key.type === 'string') {
-      const resolvedType = this.builder.schema.resolve(this.key.type, { aliases: false })
+      const resolvedType = this.builder.schema.resolve(this.key.type, {
+        aliases: false
+      })
       this.fullKey = [null] // null implies no name, ie primitive
       this.keyEncoding.push(resolvedType.name)
     } else {
       this.fullKey = []
       for (const field of this.key.type.fields) {
-        const resolvedType = this.builder.schema.resolve(field.type, { aliases: false })
+        const resolvedType = this.builder.schema.resolve(field.type, {
+          aliases: false
+        })
         this.keyEncoding.push(resolvedType.name)
         this.fullKey.push(field.name)
       }
@@ -219,7 +255,10 @@ class Index extends DBType {
         ? this.key
         : {
             type: this.key.type,
-            map: (typeof this.key.map === 'function') ? this.key.map.toString() : this.key.map
+            map:
+              typeof this.key.map === 'function'
+                ? this.key.map.toString()
+                : this.key.map
           }
     }
   }
@@ -274,7 +313,11 @@ class BuilderNamespace {
 }
 
 class Builder {
-  constructor (schema, dbJson, { offset = 0, dbDir = null, schemaDir = null } = {}) {
+  constructor (
+    schema,
+    dbJson,
+    { offset = 0, dbDir = null, schemaDir = null } = {}
+  ) {
     this.schema = schema
     this.version = dbJson ? dbJson.version : 0
     this.offset = dbJson ? dbJson.offset : offset
@@ -327,7 +370,9 @@ class Builder {
     const unsafe = type.description.unsafe
     if (unsafe) {
       if (unsafe.prefix && !Number.isInteger(unsafe.id)) {
-        throw new Error('If a type overrides a prefix, it must also specifiy an ID')
+        throw new Error(
+          'If a type overrides a prefix, it must also specifiy an ID'
+        )
       }
       if (unsafe.prefix) return { id: unsafe.id, prefix: unsafe.prefix }
     }
@@ -357,7 +402,9 @@ class Builder {
   }
 
   namespace (name, opts) {
-    if (this.namespaces.has(name)) throw new Error('Namespace already exists: ' + name)
+    if (this.namespaces.has(name)) {
+      throw new Error('Namespace already exists: ' + name)
+    }
     const ns = new BuilderNamespace(this, name, opts)
     this.namespaces.set(name, ns)
     return ns
@@ -385,9 +432,17 @@ class Builder {
     const dbJsonPath = p.join(p.resolve(dbDir), DB_JSON_FILE_NAME)
     const codePath = p.join(p.resolve(dbDir), CODE_FILE_NAME)
 
-    fs.writeFileSync(messagesPath, hyperdb.schema.toCode({ esm }), { encoding: 'utf-8' })
-    fs.writeFileSync(dbJsonPath, JSON.stringify(hyperdb.toJSON(), null, 2), { encoding: 'utf-8' })
-    fs.writeFileSync(codePath, generateCode(hyperdb, { directory: dbDir, esm }), { encoding: 'utf-8' })
+    fs.writeFileSync(messagesPath, hyperdb.schema.toCode({ esm }), {
+      encoding: 'utf-8'
+    })
+    fs.writeFileSync(dbJsonPath, JSON.stringify(hyperdb.toJSON(), null, 2), {
+      encoding: 'utf-8'
+    })
+    fs.writeFileSync(
+      codePath,
+      generateCode(hyperdb, { directory: dbDir, esm }),
+      { encoding: 'utf-8' }
+    )
   }
 
   static from (schemaJson, dbJson, opts) {
@@ -402,7 +457,13 @@ class Builder {
         if (err.code !== 'ENOENT') throw err
       }
       opts = { ...opts, dbDir: dbJson, schemaDir: schemaJson }
-      if (exists) return new this(schema, JSON.parse(fs.readFileSync(jsonFilePath)), opts)
+      if (exists) {
+        return new this(
+          schema,
+          JSON.parse(fs.readFileSync(jsonFilePath)),
+          opts
+        )
+      }
       return new this(schema, null, opts)
     }
     return new this(schema, dbJson, opts)

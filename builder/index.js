@@ -287,11 +287,11 @@ class BuilderIndexes {
 }
 
 class BuilderNamespace {
-  constructor (builder, name, { prefix = [] } = {}) {
+  constructor (builder, name, { id, prefix = [] } = {}) {
     this.builder = builder
     this.name = name
     this.prefix = prefix
-    this.id = builder.namespaces.size
+    this.id = id || builder.namespaces.size
 
     this.collections = new BuilderCollections(this)
     this.indexes = new BuilderIndexes(this)
@@ -351,16 +351,14 @@ class Builder {
   static esm = false
 
   _loadStartingNamespaces () {
-    for (let i = this.schema.schema.length - 1; i >= 0; i--) {
-      const s = this.schema.schema[i]
-      if (!s.name.includes('/hyperdb#')) {
-        continue
-      }
+    let id = 0
+    for (let i = this.orderedTypes.length - 1; i >= 0; i--) {
+      const s = this.orderedTypes[i]
 
       if (!this.loadedNamespaces.has(s.namespace)) {
         this.loadedNamespaces.set(
           s.namespace,
-          new BuilderNamespace(this, s.namespace)
+          new BuilderNamespace(this, s.namespace, { id: id++ })
         )
       }
     }

@@ -351,7 +351,7 @@ class Builder {
   static esm = false
 
   _loadStartingNamespaces () {
-    for (let i = 0; i < this.schema.schema.length; i++) {
+    for (let i = this.schema.schema.length - 1; i >= 0; i--) {
       const s = this.schema.schema[i]
       if (!s.name.includes('/hyperdb#')) {
         continue

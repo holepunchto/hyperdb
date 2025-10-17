@@ -350,9 +350,23 @@ class Builder {
 
   static esm = false
 
+  getNamespace (namespace) {
+    return (
+      this.namespaces.get(namespace) || this.loadedNamespaces.get(namespace)
+    )
+  }
+
+  getNamespaces () {
+    const namespaces =
+      this.namespaces.size > 0
+        ? Array.from(this.namespaces.values())
+        : Array.from(this.loadedNamespaces.values())
+    return namespaces
+  }
+
   _loadStartingNamespaces () {
     let id = 0
-    for (let i = this.orderedTypes.length - 1; i >= 0; i--) {
+    for (let i = 0; i < this.orderedTypes.length; i++) {
       const s = this.orderedTypes[i]
 
       if (!this.loadedNamespaces.has(s.namespace)) {

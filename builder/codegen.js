@@ -82,7 +82,7 @@ module.exports = function generateCode (hyperdb, { directory = '.', esm = false 
   }
 
   let addedHelper = false
-  for (const ns of hyperdb.namespaces.values()) {
+  for (const ns of hyperdb.getNamespaces()) {
     if (!ns.helpers) continue
     addedHelper = true
     const helpers = p.relative(p.resolve(directory), ns.helpers).replaceAll('\\', '/')

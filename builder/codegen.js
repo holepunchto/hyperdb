@@ -23,10 +23,14 @@ const type = contract.resolveIndex('@keet/devices-by-name')
 }
 */
 
+const c = require('compact-encoding')
 const gen = require('generate-object-property')
 const s = require('generate-string')
 const p = require('path')
 const pkg = require('../package.json')
+
+const COLLECTION_TYPE = 0
+// const INDEX_TYPE = 1
 
 const IndexTypeMap = new Map([
   ['uint', 'IndexEncoder.UINT'],
@@ -72,11 +76,11 @@ module.exports = function generateCode (hyperdb, { directory = '.', esm = false 
   str += '/* eslint-disable camelcase */\n'
   str += '\n'
   if (esm) {
-    str += `import { IndexEncoder, c } from '${pkg.name}/runtime'\n`
+    str += `import { IndexEncoder, c, b4a } from '${pkg.name}/runtime'\n`
     str += 'import { version, getEncoding, setVersion } from \'./messages.js\'\n'
     str += '\n'
   } else {
-    str += `const { IndexEncoder, c } = require('${pkg.name}/runtime')\n`
+    str += `const { IndexEncoder, c, b4a } = require('${pkg.name}/runtime')\n`
     str += 'const { version, getEncoding, setVersion } = require(\'./messages.js\')\n'
     str += '\n'
   }
@@ -202,6 +206,7 @@ function generateCommonPrefix (type) {
 
 function generateCollectionDefinition (collection) {
   const id = getId(collection)
+  const v = collection.version
 
   let str = generateCommonPrefix(collection)
 
@@ -219,7 +224,13 @@ function generateCollectionDefinition (collection) {
   str += `function ${id}_reconstruct (version, keyBuf, valueBuf) {\n`
   if (collection.key.length) str += `  const key = ${id}_key.decode(keyBuf)\n`
   str += '  setVersion(version)\n'
-  str += `  const record = c.decode(${id}_enc, valueBuf)\n`
+  str += '  const state = { start: 0, end: valueBuf.byteLength, buffer: valueBuf }\n'
+  if (v > 0) {
+    str += '  const type = c.uint.decode(state)\n'
+    str += `  if (type !== ${COLLECTION_TYPE}) throw new Error('Unknown type: ' + type)\n`
+    str += `  ${id}.decodedVersion = c.uint.decode(state)\n`
+  }
+  str += `  const record = ${id}_enc.decode(state)\n`
 
   for (let i = 0; i < collection.key.length; i++) {
     const key = collection.key[i]
@@ -247,7 +258,8 @@ function generateCollectionDefinition (collection) {
   str += `  trigger: ${collection.trigger ? id + '_trigger' : 'null'},\n`
   str += `  reconstruct: ${id}_reconstruct,\n`
   str += `  reconstructKey: ${id}_reconstruct_key,\n`
-  str += '  indexes: []\n'
+  str += '  indexes: [],\n'
+  str += '  decodedVersion: 0\n'
   str += '}\n'
   return str
 }
@@ -264,7 +276,7 @@ function generateIndexDefinition (index) {
   str += `  id: ${index.id},\n`
   str += generateEncodeIndexKey(index, ',')
   str += generateEncodeKeyRange(index, ',')
-  str += `  encodeValue: (doc) => ${id}.collection.encodeKey(doc),\n`
+  str += `  encodeValue: (record) => ${id}.collection.encodeKey(record),\n`
   str += generateEncodeIndexKeys(index, ',')
   str += '  reconstruct: (keyBuf, valueBuf) => valueBuf,\n'
   str += `  offset: ${offset},\n`
@@ -297,11 +309,25 @@ function generateEncodeKeyRange (index, sep) {
 
 function generateEncodeCollectionValue (collection, sep) {
   const id = getId(collection)
+  const v = collection.version
+  const end = v > 0 ? (getUintLength(v) + 1) : 0
 
   let str = ''
   str += '  encodeValue (version, record) {\n'
   str += '    setVersion(version)\n'
-  str += `    return c.encode(${id}_enc, record)\n`
+  str += `    const state = { start: 0, end: ${end}, buffer: null }\n`
+  str += `    ${id}_enc.preencode(state, record)\n`
+  str += '    state.buffer = b4a.allocUnsafe(state.end)\n'
+  if (v > 0) {
+    str += `    state.buffer[state.start++] = ${COLLECTION_TYPE}\n`
+    if (getUintLength(v) === 0) {
+      str += `    state.buffer[state.start++] = ${v}\n`
+    } else {
+      str += `    c.uint.encode(state, ${v})\n`
+    }
+  }
+  str += `    ${id}_enc.encode(state, record)\n`
+  str += '    return state.buffer'
   str += `  }${sep}\n`
   return str
 }
@@ -434,4 +460,10 @@ function getKeyPath (key, name, optional) {
   if (key === null) return name
   const r = (a, b, i) => (i === 0 || !optional) ? gen(a, b) : gen.optional(a, b)
   return key.split('.').reduce(r, name)
+}
+
+function getUintLength (n) {
+  const state = { buffer: null, start: 0, end: 0 }
+  c.uint.preencode(state, n)
+  return state.end
 }

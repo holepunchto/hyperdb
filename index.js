@@ -320,8 +320,8 @@ class HyperDB {
 
   changes (range = {}) {
     maybeClosed(this)
-
-    return this.engine.changes(range.live ? null : this.engineSnapshot, this.version, this.definition, range)
+    const snap = range.live ? null : this.engineSnapshot
+    return this.engine.changes(snap, this.version, this.definition, range)
   }
 
   watch (fn) {
@@ -474,7 +474,11 @@ class HyperDB {
       if (key === null) return null
 
       const u = this.updates.getIndex(index, key)
-      if (u !== null && checkout === -1) return u.value === null ? null : index.collection.reconstruct(this.version, u.key, u.value)
+      if (u !== null && checkout === -1) {
+        return u.value === null
+          ? null
+          : index.collection.reconstruct(this.version, u.key, u.value, null)
+      }
 
       const value = await snap.get(key, checkout, this.activeRequests)
       if (value === null) return null
@@ -493,7 +497,9 @@ class HyperDB {
     const key = b4a.isBuffer(doc) ? doc : collection.encodeKey(doc)
 
     const u = this.updates.get(key)
-    const value = (u !== null && checkout === -1) ? u.value : await snap.get(key, checkout, this.activeRequests)
+    const value = (u !== null && checkout === -1)
+      ? u.value
+      : await snap.get(key, checkout, this.activeRequests)
 
     // check again now cause we did async work above to engine might be nulled out
     maybeClosed(this)
@@ -574,7 +580,9 @@ class HyperDB {
         return
       }
 
-      const prevDoc = prevValue === null ? null : collection.reconstruct(this.version, key, prevValue)
+      const prevDoc = prevValue === null
+        ? null
+        : collection.reconstruct(this.version, key, prevValue)
 
       const u = this.updates.update(collection, key, value)
 
@@ -617,14 +625,19 @@ class HyperDB {
   }
 
   async _flush () {
-    if (this.engine.outdated(this.engineSnapshot)) throw new Error('Database has changed, refusing to commit')
+    if (this.engine.outdated(this.engineSnapshot)) {
+      throw new Error('Database has changed, refusing to commit')
+    }
+
     if (this.updates.refs > 1) this.updates = this.updates.detach()
 
     await this.engine.commit(this.updates)
 
     this.update()
 
-    if (this.rootInstance !== this && this.rootInstance.updates.size === 0) this.rootInstance.update()
+    if (this.rootInstance !== this && this.rootInstance.updates.size === 0) {
+      this.rootInstance.update()
+    }
   }
 
   async flush () {

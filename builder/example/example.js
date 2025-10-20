@@ -142,6 +142,12 @@ exampleDb.indexes.register({
 })
 
 exampleDb.indexes.register({
+  name: 'collection1-by-id4',
+  collection: '@example/collection1',
+  key: ['id3']
+})
+
+exampleDb.indexes.register({
   name: 'collection1-by-struct',
   collection: '@example/collection1',
   key: ['name', 'age']

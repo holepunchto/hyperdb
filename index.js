@@ -246,6 +246,7 @@ class HyperDB {
   }
 
   static rocks (storage, definition, options = {}) {
+    console.log('rocks storage ==', storage)
     const readOnly = options.readOnly === true || options.readonly === true
     const trace = options.trace || null
     return new HyperDB(new RocksEngine(storage, { readOnly, trace }), definition, options)

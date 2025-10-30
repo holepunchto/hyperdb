@@ -1,5 +1,6 @@
 exports.mapTeenager = (record, context) => {
   if (record.age < 13 || record.age > 19) return []
+  console.log('teenager', record)
   return [record.age]
 }
 

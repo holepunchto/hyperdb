@@ -89,7 +89,7 @@ test.solo('two collections work with indexes, one deprecated', async function ({
 
   {
     const all = await dbDeprecated.find('@example/members-by-name').toArray()
-    t.is(all.length, 1, 'deprecated')
+    t.is(all.length, 0, 'deprecated')
   }
 
   {

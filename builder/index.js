@@ -325,8 +325,14 @@ class Builder {
 
   registerIndex (description, namespace) {
     const fqn = getFQN(namespace, description.name)
+    const existing = this.typesByName.get(fqn)
+
     // TODO: also validate this for invalid mutations if it was hydrated from JSON
-    if (this.typesByName.has(fqn)) return
+    if (existing) {
+      // allow updating the deprecation notice always
+      if (description.deprecated) existing.deprecated = true
+      return
+    }
 
     const index = new Index(this, namespace, description)
 

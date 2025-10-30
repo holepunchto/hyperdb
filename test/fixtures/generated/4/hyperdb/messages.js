@@ -2,24 +2,26 @@
 // Schema Version: 1
 /* eslint-disable camelcase */
 /* eslint-disable quotes */
+/* eslint-disable space-before-function-paren */
+
+const { c } = require('hyperschema/runtime')
 
 const VERSION = 1
-const { c } = require('hyperschema/runtime')
 
 // eslint-disable-next-line no-unused-vars
 let version = VERSION
 
 // @db/member
 const encoding0 = {
-  preencode (state, m) {
+  preencode(state, m) {
     c.string.preencode(state, m.id)
     c.uint.preencode(state, m.age)
   },
-  encode (state, m) {
+  encode(state, m) {
     c.string.encode(state, m.id)
     c.uint.encode(state, m.age)
   },
-  decode (state) {
+  decode(state) {
     const r0 = c.string.decode(state)
     const r1 = c.uint.decode(state)
 
@@ -35,23 +37,19 @@ const encoding1_0 = c.frame(encoding0)
 
 // @db/nested
 const encoding1 = {
-  preencode (state, m) {
-    let flags = 0
-    if (m.fun) flags |= 1
-
+  preencode(state, m) {
     encoding1_0.preencode(state, m.member)
-    c.uint.preencode(state, flags)
+    state.end++ // max flag is 1 so always one byte
   },
-  encode (state, m) {
-    let flags = 0
-    if (m.fun) flags |= 1
+  encode(state, m) {
+    const flags = m.fun ? 1 : 0
 
     encoding1_0.encode(state, m.member)
     c.uint.encode(state, flags)
   },
-  decode (state) {
+  decode(state) {
     const r0 = encoding1_0.decode(state)
-    const flags = state.start < state.end ? c.uint.decode(state) : 0
+    const flags = c.uint.decode(state)
 
     return {
       member: r0,
@@ -62,13 +60,13 @@ const encoding1 = {
 
 // @db/member/hyperdb#0
 const encoding2 = {
-  preencode (state, m) {
+  preencode(state, m) {
     c.uint.preencode(state, m.age)
   },
-  encode (state, m) {
+  encode(state, m) {
     c.uint.encode(state, m.age)
   },
-  decode (state) {
+  decode(state) {
     const r1 = c.uint.decode(state)
 
     return {
@@ -79,27 +77,23 @@ const encoding2 = {
 }
 
 // @db/nested/hyperdb#0.member
-const encoding3_0 = c.frame(encoding0)
+const encoding3_0 = encoding1_0
 
 // @db/nested/hyperdb#0
 const encoding3 = {
-  preencode (state, m) {
-    let flags = 0
-    if (m.fun) flags |= 1
-
+  preencode(state, m) {
     encoding3_0.preencode(state, m.member)
-    c.uint.preencode(state, flags)
+    state.end++ // max flag is 1 so always one byte
   },
-  encode (state, m) {
-    let flags = 0
-    if (m.fun) flags |= 1
+  encode(state, m) {
+    const flags = m.fun ? 1 : 0
 
     encoding3_0.encode(state, m.member)
     c.uint.encode(state, flags)
   },
-  decode (state) {
+  decode(state) {
     const r0 = encoding3_0.decode(state)
-    const flags = state.start < state.end ? c.uint.decode(state) : 0
+    const flags = c.uint.decode(state)
 
     return {
       member: r0,
@@ -108,46 +102,69 @@ const encoding3 = {
   }
 }
 
-function setVersion (v) {
+function setVersion(v) {
   version = v
 }
 
-function encode (name, value, v = VERSION) {
+function encode(name, value, v = VERSION) {
   version = v
   return c.encode(getEncoding(name), value)
 }
 
-function decode (name, buffer, v = VERSION) {
+function decode(name, buffer, v = VERSION) {
   version = v
   return c.decode(getEncoding(name), buffer)
 }
 
-function getEncoding (name) {
+function getEnum(name) {
   switch (name) {
-    case '@db/member': return encoding0
-    case '@db/nested': return encoding1
-    case '@db/member/hyperdb#0': return encoding2
-    case '@db/nested/hyperdb#0': return encoding3
-    default: throw new Error('Encoder not found ' + name)
+    default:
+      throw new Error('Enum not found ' + name)
   }
 }
 
-function resolveStruct (name, v = VERSION) {
+function getEncoding(name) {
+  switch (name) {
+    case '@db/member':
+      return encoding0
+    case '@db/nested':
+      return encoding1
+    case '@db/member/hyperdb#0':
+      return encoding2
+    case '@db/nested/hyperdb#0':
+      return encoding3
+    default:
+      throw new Error('Encoder not found ' + name)
+  }
+}
+
+function getStruct(name, v = VERSION) {
   const enc = getEncoding(name)
   return {
-    preencode (state, m) {
+    preencode(state, m) {
       version = v
       enc.preencode(state, m)
     },
-    encode (state, m) {
+    encode(state, m) {
       version = v
       enc.encode(state, m)
     },
-    decode (state) {
+    decode(state) {
       version = v
       return enc.decode(state)
     }
   }
 }
 
-module.exports = { resolveStruct, getEncoding, encode, decode, setVersion, version }
+const resolveStruct = getStruct // compat
+
+module.exports = {
+  resolveStruct,
+  getStruct,
+  getEnum,
+  getEncoding,
+  encode,
+  decode,
+  setVersion,
+  version
+}

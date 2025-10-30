@@ -1,4 +1,6 @@
 const { test } = require('./helpers')
+const tmp = require('test-tmp')
+const path = require('path')
 
 test('members with unique index', async function ({ build }, t) {
   const db = await build(createExampleDB)
@@ -65,7 +67,8 @@ test('two collections work with indexes', async function ({ build }, t) {
 })
 
 test.solo('two collections work with indexes, one deprecated', async function ({ build }, t) {
-  const db = await build(createExampleDB)
+  const dir = await tmp(t, { dir: path.join(__dirname, 'fixtures/tmp') })
+  const db = await build(createExampleDB, { dir })
 
   await db.insert('@example/members', { name: 'test1', age: 16 })
   await db.insert('@example/devices', { key: 'device-1', name: 'my device 1' })
@@ -82,18 +85,19 @@ test.solo('two collections work with indexes, one deprecated', async function ({
 
   await db.close()
 
-  const dbDeprecated = await build(createExampleDBWithDeprecation)
+  const dbDeprecated = await build(createExampleDBWithDeprecation, { dir })
 
-  await dbDeprecated.insert('@example/members', { name: 'test2', age: 16 })
+  await dbDeprecated.insert('@example/members', { name: 'test2', age: 15 })
   await dbDeprecated.insert('@example/devices', { key: 'device-2', name: 'my device 2' })
 
   {
     const all = await dbDeprecated.find('@example/members-by-name').toArray()
-    t.is(all.length, 0, 'deprecated')
+    t.is(all.length, 1, 'deprecated')
   }
 
   {
     const all = await dbDeprecated.find('@example/teenagers').toArray()
+    console.log('teen', all)
     t.is(all.length, 2)
   }
 
@@ -245,6 +249,7 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
 
   Hyperschema.toDisk(schema)
 
+  console.log('createExampleDB paths====', paths.db)
   const db = HyperDB.from(paths.schema, paths.db)
   const exampleDB = db.namespace('example')
 
@@ -331,6 +336,7 @@ function createExampleDBWithDeprecation (HyperDB, Hyperschema, paths) {
 
   Hyperschema.toDisk(schema)
 
+  console.log('createExampleDBWithDeprecation paths====', paths.db)
   const db = HyperDB.from(paths.schema, paths.db)
   const exampleDB = db.namespace('example')
 

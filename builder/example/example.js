@@ -94,11 +94,10 @@ example.register({
   ]
 })
 
-Hyperschema.toDisk(schema)
+const db = HyperDB.from(DB_DIR)
+db.registerSchema(schema)
 
-const db = HyperDB.from(SCHEMA_DIR, DB_DIR)
 const exampleDb = db.namespace('example')
-
 exampleDb.require('./helpers.js')
 
 exampleDb.collections.register({
@@ -153,4 +152,5 @@ exampleDb.indexes.register({
   key: ['name', 'tags']
 })
 
+Hyperschema.toDisk(schema)
 HyperDB.toDisk(db)

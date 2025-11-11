@@ -30,7 +30,6 @@ const p = require('path')
 const pkg = require('../package.json')
 
 const COLLECTION_TYPE = 0
-// const INDEX_TYPE = 1
 
 const IndexTypeMap = new Map([
   ['uint', 'IndexEncoder.UINT'],
@@ -228,7 +227,7 @@ function generateCollectionDefinition (collection) {
 
   if (v > 0 && !collection.versionField) {
     str += '  const type = c.uint.decode(state)\n'
-    str += `  if (type !== ${COLLECTION_TYPE}) throw new Error('Unknown type: ' + type)\n`
+    str += `  if (type !== ${COLLECTION_TYPE}) throw new Error('Unknown collection type: ' + type)\n`
     str += `  ${id}.decodedVersion = c.uint.decode(state)\n`
   }
 

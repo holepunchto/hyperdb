@@ -69,7 +69,7 @@ class Collection extends DBType {
   constructor (builder, namespace, description) {
     super(builder, namespace, description)
 
-    const updated = isGenesis(description) && !isCompat(description)
+    const updated = isGenesis(description) && isVersioned(description)
 
     this.isCollection = true
     this.version = updated ? builder._bump() : (description.version || 0)
@@ -162,7 +162,7 @@ class Index extends DBType {
   constructor (builder, namespace, description) {
     super(builder, namespace, description)
 
-    const updated = isGenesis(description) && !isCompat(description)
+    const updated = isGenesis(description) && isVersioned(description)
     const collection = this.builder.typesByName.get(description.collection)
 
     this.isIndex = true
@@ -457,6 +457,8 @@ function isGenesis (schema) {
   return schema.id === undefined
 }
 
-function isCompat (schema) {
-  return !isGenesis(schema) && (schema.version === undefined || schema.version === 0) && !schema.versionField
+function isVersioned (schema) {
+  if (isGenesis(schema)) return true
+  if (schema.versionField) return true
+  return schema.version !== undefined && schema.version !== 0
 }

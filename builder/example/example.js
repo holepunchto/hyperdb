@@ -90,6 +90,10 @@ example.register({
     {
       name: 'count',
       type: 'uint'
+    },
+    {
+      name: 'yoloVersion',
+      type: 'uint'
     }
   ]
 })
@@ -104,7 +108,8 @@ exampleDb.require('./helpers.js')
 exampleDb.collections.register({
   name: 'collection1-info',
   schema: '@example/collection-info',
-  derived: true
+  derived: true,
+  versionField: 'yoloVersion'
 })
 
 exampleDb.collections.register({

@@ -73,6 +73,7 @@ class Collection extends DBType {
 
     this.isCollection = true
     this.version = updated ? builder._bump() : (description.version || 0)
+    this.versionField = description.versionField || null
     this.derived = !!description.derived
     this.indexes = []
 
@@ -147,6 +148,7 @@ class Collection extends DBType {
       ...super.toJSON(),
       type: COLLECTION_TYPE,
       version: this.version,
+      versionField: this.versionField,
       indexes: this.indexes.map(i => i.fqn),
       schema: this.schema.fqn,
       derived: this.derived,
@@ -347,8 +349,14 @@ class Builder {
 
   registerCollection (description, namespace) {
     const fqn = getFQN(namespace, description.name)
+    const existing = this.typesByName.get(fqn)
+
     // TODO: also validate this for invalid mutations if it was hydrated from JSON
-    if (this.typesByName.has(fqn)) return
+    if (existing) {
+      // allow updating the version field
+      if (description.versionField) existing.versionField = description.versionField
+      return
+    }
 
     const collection = new Collection(this, namespace, description)
 
@@ -450,5 +458,5 @@ function isGenesis (schema) {
 }
 
 function isCompat (schema) {
-  return !isGenesis(schema) && (schema.version === undefined || schema.version === 0)
+  return !isGenesis(schema) && (schema.version === undefined || schema.version === 0) && !schema.versionField
 }

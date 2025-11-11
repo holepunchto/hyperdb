@@ -1,6 +1,6 @@
 const { test } = require('./helpers')
 
-test.solo('members with unique index', async function ({ build }, t) {
+test('members with unique index', async function ({ build }, t) {
   const db = await build(createExampleDB)
 
   await db.insert('@example/members', { name: 'test', age: 10 })

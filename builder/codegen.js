@@ -225,16 +225,22 @@ function generateCollectionDefinition (collection) {
   if (collection.key.length) str += `  const key = ${id}_key.decode(keyBuf)\n`
   str += '  setVersion(version)\n'
   str += '  const state = { start: 0, end: valueBuf.byteLength, buffer: valueBuf }\n'
-  if (v > 0) {
+
+  if (v > 0 && !collection.versionField) {
     str += '  const type = c.uint.decode(state)\n'
     str += `  if (type !== ${COLLECTION_TYPE}) throw new Error('Unknown type: ' + type)\n`
     str += `  ${id}.decodedVersion = c.uint.decode(state)\n`
   }
+
   str += `  const record = ${id}_enc.decode(state)\n`
 
   for (let i = 0; i < collection.key.length; i++) {
     const key = collection.key[i]
     str += `  ${getKeyPath(key, 'record', false)} = key[${i}]\n`
+  }
+
+  if (collection.versionField) {
+    str += `  ${id}.decodedVersion = ${gen('record', collection.versionField)}\n`
   }
 
   str += '  return record\n'
@@ -310,15 +316,21 @@ function generateEncodeKeyRange (index, sep) {
 function generateEncodeCollectionValue (collection, sep) {
   const id = getId(collection)
   const v = collection.version
-  const end = v > 0 ? (getUintLength(v) + 1) : 0
+  const end = (v > 0 && !collection.versionField) ? (getUintLength(v) + 1) : 0
 
   let str = ''
   str += '  encodeValue (version, record) {\n'
   str += '    setVersion(version)\n'
   str += `    const state = { start: 0, end: ${end}, buffer: null }\n`
+
+  if (collection.versionField) {
+    str += `${gen('record', collection.versionField)} = ${v}\n`
+  }
+
   str += `    ${id}_enc.preencode(state, record)\n`
   str += '    state.buffer = b4a.allocUnsafe(state.end)\n'
-  if (v > 0) {
+
+  if (v > 0 && !collection.versionField) {
     str += `    state.buffer[state.start++] = ${COLLECTION_TYPE}\n`
     if (getUintLength(v) === 0) {
       str += `    state.buffer[state.start++] = ${v}\n`
@@ -326,8 +338,9 @@ function generateEncodeCollectionValue (collection, sep) {
       str += `    c.uint.encode(state, ${v})\n`
     }
   }
+
   str += `    ${id}_enc.encode(state, record)\n`
-  str += '    return state.buffer'
+  str += '    return state.buffer\n'
   str += `  }${sep}\n`
   return str
 }

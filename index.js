@@ -452,31 +452,31 @@ class HyperDB {
     return this.find(indexName, query, { ...options, limit: 1 }).one()
   }
 
-  updated (collectionName, doc) {
+  updated (collectionName, record) {
     if (this.updates === null) return false
     if (!collectionName) return this.updates.size > 0
 
     const collection = this.definition.resolveCollection(collectionName)
     if (collection === null) return false
 
-    const key = b4a.isBuffer(doc) ? doc : collection.encodeKey(doc)
+    const key = b4a.isBuffer(record) ? record : collection.encodeKey(record)
     const u = this.updates.get(key)
     return u !== null
   }
 
-  async get (collectionName, doc, { checkout = -1 } = {}) {
+  async get (collectionName, record, { checkout = -1 } = {}) {
     maybeClosed(this)
 
     const snap = this.engineSnapshot.ref()
 
     try {
       const collection = this.definition.resolveCollection(collectionName)
-      if (collection !== null) return await this._getCollection(collection, snap, doc, checkout)
+      if (collection !== null) return await this._getCollection(collection, snap, record, checkout)
 
       const index = this.definition.resolveIndex(collectionName)
       if (index === null) throw new Error('Unknown index or collection: ' + collectionName)
 
-      const key = index.encodeKey(doc, this.context)
+      const key = index.encodeKey(record, this.context)
       if (key === null) return null
 
       const u = this.updates.getIndex(index, key)
@@ -495,12 +495,12 @@ class HyperDB {
     }
   }
 
-  async _getCollection (collection, snap, doc, checkout) {
+  async _getCollection (collection, snap, record, checkout) {
     maybeClosed(this)
 
     // we allow passing the raw primary key here cause thats what the trigger passes for simplicity
     // you shouldnt rely on that.
-    const key = b4a.isBuffer(doc) ? doc : collection.encodeKey(doc)
+    const key = b4a.isBuffer(record) ? record : collection.encodeKey(record)
 
     const u = this.updates.get(key)
     const value = (u !== null && checkout === -1)
@@ -514,11 +514,11 @@ class HyperDB {
   }
 
   // TODO: needs to wait for pending inserts/deletes and then lock all future ones whilst it runs
-  _runTrigger (collection, key, doc) {
-    return collection.trigger(this, key, doc, this.context)
+  _runTrigger (collection, key, record) {
+    return collection.trigger(this, key, record, this.context)
   }
 
-  async delete (collectionName, doc) {
+  async delete (collectionName, record) {
     maybeClosed(this)
 
     if (this.updates.refs > 1) this.updates = this.updates.detach()
@@ -529,13 +529,13 @@ class HyperDB {
     while (this.updates.enter(collection) === false) await this.updates.wait(collection)
 
     const snap = this.engineSnapshot.ref()
-    const key = collection.encodeKey(doc)
+    const key = collection.encodeKey(record)
 
     let prevValue = null
 
     try {
       prevValue = await this.engineSnapshot.get(key, -1, this.activeRequests)
-      if (collection.trigger !== null) await this._runTrigger(collection, doc, null)
+      if (collection.trigger !== null) await this._runTrigger(collection, record, null)
 
       if (prevValue === null) {
         this.updates.delete(key)
@@ -561,7 +561,7 @@ class HyperDB {
     }
   }
 
-  async insert (collectionName, doc, { force = false } = {}) {
+  async insert (collectionName, record, { force = false } = {}) {
     maybeClosed(this)
 
     if (this.updates.refs > 1) this.updates = this.updates.detach()
@@ -572,15 +572,15 @@ class HyperDB {
     while (this.updates.enter(collection) === false) await this.updates.wait(collection)
 
     const snap = this.engineSnapshot.ref()
-    const key = collection.encodeKey(doc)
+    const key = collection.encodeKey(record)
     const collectionVersion = Math.min(this.versions.db, collection.version)
-    const value = collection.encodeValue(this.versions.schema, collectionVersion, doc)
+    const value = collection.encodeValue(this.versions.schema, collectionVersion, record)
 
     let prevValue = null
 
     try {
       prevValue = await this.engineSnapshot.get(key, -1, this.activeRequests)
-      if (collection.trigger !== null) await this._runTrigger(collection, doc, doc)
+      if (collection.trigger !== null) await this._runTrigger(collection, record, record)
 
       if (!force && prevValue !== null && b4a.equals(value, prevValue)) {
         this.updates.delete(key)
@@ -598,13 +598,13 @@ class HyperDB {
       for (let i = 0; i < collection.indexes.length; i++) {
         const idx = collection.indexes[i]
         const prevKeys = prevDoc ? idx.encodeIndexKeys(prevDoc, this.context) : []
-        const nextKeys = idx.encodeIndexKeys(doc, this.context)
+        const nextKeys = idx.encodeIndexKeys(record, this.context)
         const ups = []
 
         u.indexes.push(ups)
 
         const [del, put] = diffKeys(prevKeys, nextKeys, force)
-        const value = put.length === 0 ? null : idx.encodeValue(doc)
+        const value = put.length === 0 ? null : idx.encodeValue(record)
 
         for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
         for (let j = 0; j < put.length; j++) ups.push({ key: put[j], value })

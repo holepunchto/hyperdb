@@ -300,6 +300,10 @@ class HyperDB {
     return this.rootInstance !== null && this.rootInstance !== this
   }
 
+  setVersions (versions) {
+    this.versions = versions
+  }
+
   setDefinition (definition) {
     definition = def.compat(definition)
 
@@ -543,11 +547,14 @@ class HyperDB {
       }
 
       const prevDoc = collection.reconstruct(this.versions.schema, key, prevValue)
+      const prevVersion = collection.decodedVersion
 
       const u = this.updates.update(collection, key, null)
 
       for (let i = 0; i < collection.indexes.length; i++) {
         const idx = collection.indexes[i]
+        if (idx.version > prevVersion) continue
+
         const del = idx.encodeIndexKeys(prevDoc, this.context)
         const ups = []
 
@@ -561,7 +568,7 @@ class HyperDB {
     }
   }
 
-  async insert (collectionName, record, { force = false } = {}) {
+  async insert (collectionName, record) {
     maybeClosed(this)
 
     if (this.updates.refs > 1) this.updates = this.updates.detach()
@@ -582,14 +589,18 @@ class HyperDB {
       prevValue = await this.engineSnapshot.get(key, -1, this.activeRequests)
       if (collection.trigger !== null) await this._runTrigger(collection, record, record)
 
-      if (!force && prevValue !== null && b4a.equals(value, prevValue)) {
-        this.updates.delete(key)
-        return
-      }
-
       const prevDoc = prevValue === null
         ? null
         : collection.reconstruct(this.versions.schema, key, prevValue)
+
+      const prevVersion = prevDoc
+        ? collection.decodedVersion
+        : -1
+
+      if (prevValue !== null && prevVersion === collectionVersion && b4a.equals(value, prevValue)) {
+        this.updates.delete(key)
+        return
+      }
 
       const u = this.updates.update(collection, key, value)
 
@@ -597,13 +608,13 @@ class HyperDB {
 
       for (let i = 0; i < collection.indexes.length; i++) {
         const idx = collection.indexes[i]
-        const prevKeys = prevDoc ? idx.encodeIndexKeys(prevDoc, this.context) : []
+        const prevKeys = idx.version <= prevVersion ? idx.encodeIndexKeys(prevDoc, this.context) : []
         const nextKeys = idx.encodeIndexKeys(record, this.context)
         const ups = []
 
         u.indexes.push(ups)
 
-        const [del, put] = diffKeys(prevKeys, nextKeys, force)
+        const [del, put] = diffKeys(prevKeys, nextKeys)
         const value = put.length === 0 ? null : idx.encodeValue(record)
 
         for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
@@ -693,12 +704,12 @@ function reverseCompareOverlay (a, b) {
   return b.tick - a.tick
 }
 
-function diffKeys (a, b, force) {
+function diffKeys (a, b) {
   if (a.length === 0 || b.length === 0) return [a, b]
 
   // 90% of all indexes
   if (a.length === 1 && b.length === 1) {
-    return b4a.equals(a[0], b[0]) ? (force ? [[], b] : [[], []]) : [a, b]
+    return b4a.equals(a[0], b[0]) ? [[], []] : [a, b]
   }
 
   a.sort(sortKeys)
@@ -713,7 +724,6 @@ function diffKeys (a, b, force) {
       const cmp = b4a.compare(a[ai], b[bi])
 
       if (cmp === 0) {
-        if (force) res[1].push(b[bi])
         ai++
         bi++
       } else if (cmp < 0) {

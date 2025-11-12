@@ -22,7 +22,7 @@ example.register({
       required: true
     },
     {
-      name: 'field1',
+      name: 'field2',
       type: 'uint',
       required: true
     }

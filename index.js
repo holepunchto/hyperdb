@@ -1,4 +1,5 @@
 const IndexStream = require('./lib/stream.js')
+const def = require('./lib/definition.js')
 const b4a = require('b4a')
 
 // engines
@@ -219,14 +220,14 @@ class Updates {
 
 class HyperDB {
   constructor (engine, definition, {
-    version = definition.version,
+    versions = definition.versions,
     snapshot = engine.snapshot(),
     updates = new Updates(0, []),
     rootInstance = null,
     writable = true,
     context = null
   } = {}) {
-    this.version = version
+    this.versions = versions
     this.context = context
     this.index = 0 // for the session
     this.engine = engine
@@ -242,21 +243,24 @@ class HyperDB {
   }
 
   static isDefinition (definition) {
-    return !!(definition && typeof definition.resolveCollection === 'function')
+    return def.isDefinition(definition)
   }
 
   static rocks (storage, definition, options = {}) {
     const readOnly = options.readOnly === true || options.readonly === true
     const trace = options.trace || null
-    return new HyperDB(new RocksEngine(storage, { readOnly, trace }), definition, options)
+    const engine = new RocksEngine(storage, { readOnly, trace })
+
+    return new HyperDB(engine, def.compat(definition), options)
   }
 
   static bee (core, definition, options = {}) {
     const extension = options.extension
     const autoUpdate = !!options.autoUpdate
     const trace = options.trace || null
+    const engine = new BeeEngine(core, { extension, trace })
 
-    const db = new HyperDB(new BeeEngine(core, { extension, trace }), definition, options)
+    const db = new HyperDB(engine, def.compat(definition), options)
 
     if (autoUpdate) {
       const update = db.update.bind(db)
@@ -297,7 +301,9 @@ class HyperDB {
   }
 
   setDefinition (definition) {
-    this.version = definition.version
+    definition = def.compat(definition)
+
+    this.versions = definition.versions
     this.definition = definition
   }
 
@@ -321,7 +327,7 @@ class HyperDB {
   changes (range = {}) {
     maybeClosed(this)
     const snap = range.live ? null : this.engineSnapshot
-    return this.engine.changes(snap, this.version, this.definition, range)
+    return this.engine.changes(snap, this.versions, this.definition, range)
   }
 
   watch (fn) {
@@ -360,7 +366,7 @@ class HyperDB {
     const snapshot = this.engineSnapshot.ref()
 
     return new HyperDB(this.engine, this.definition, {
-      version: this.version,
+      versions: this.versions,
       snapshot,
       updates: this.updates.ref(),
       rootInstance,
@@ -477,7 +483,7 @@ class HyperDB {
       if (u !== null && checkout === -1) {
         return u.value === null
           ? null
-          : index.collection.reconstruct(this.version, u.key, u.value, null)
+          : index.collection.reconstruct(this.versions.schema, u.key, u.value, null)
       }
 
       const value = await snap.get(key, checkout, this.activeRequests)
@@ -504,7 +510,7 @@ class HyperDB {
     // check again now cause we did async work above to engine might be nulled out
     maybeClosed(this)
 
-    return this.engine.finalize(collection, this.version, checkout, this.traceable, key, value)
+    return this.engine.finalize(collection, this.versions, checkout, this.traceable, key, value)
   }
 
   // TODO: needs to wait for pending inserts/deletes and then lock all future ones whilst it runs
@@ -536,7 +542,7 @@ class HyperDB {
         return
       }
 
-      const prevDoc = collection.reconstruct(this.version, key, prevValue)
+      const prevDoc = collection.reconstruct(this.versions.schema, key, prevValue)
 
       const u = this.updates.update(collection, key, null)
 
@@ -567,7 +573,8 @@ class HyperDB {
 
     const snap = this.engineSnapshot.ref()
     const key = collection.encodeKey(doc)
-    const value = collection.encodeValue(this.version, doc)
+    const collectionVersion = Math.min(this.versions.db, collection.version)
+    const value = collection.encodeValue(this.versions.schema, collectionVersion, doc)
 
     let prevValue = null
 
@@ -582,7 +589,7 @@ class HyperDB {
 
       const prevDoc = prevValue === null
         ? null
-        : collection.reconstruct(this.version, key, prevValue)
+        : collection.reconstruct(this.versions.schema, key, prevValue)
 
       const u = this.updates.update(collection, key, value)
 

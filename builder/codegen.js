@@ -1,28 +1,3 @@
-/*
-const contract = require('./description.js')
-const version = contract.version //schema version
-const indexes = contract.indexes
-const collections = contract.collections
-const type = contract.resolveCollection('@keet/devices')
-{
-  name: '@keet/devices',
-  encodeKey, -> full record (index encode internally) to buffer
-  encodeKeyRange, -> range options with full records (index encode internally) -> (all gt/lte options set)
-  encodeValue(version, value) -> full record to buffer
-  reconstruct(version, keyBuffer, valueBuffer) -> { ...key, ...value }, (only on coll)
-  indexes
-}
-
-const type = contract.resolveIndex('@keet/devices-by-name')
-{
-  name: '@keet/devices-by-name',
-  offset, -> position in the collection's index array
-  encodeKeys, -> full record (index encode internally) to an array of buffers
-  encodeKeyRange, -> range options with full records (index encode internally) -> (all gt/lte options set)
-  collection
-}
-*/
-
 const c = require('compact-encoding')
 const gen = require('generate-object-property')
 const s = require('generate-string')
@@ -84,6 +59,8 @@ module.exports = function generateCode (hyperdb, { directory = '.', esm = false 
     str += '\n'
   }
 
+  str += `const versions = { schema: version, db: ${hyperdb.version} }\n\n`
+
   let addedHelper = false
   for (const ns of hyperdb.namespaces.values()) {
     if (!ns.helpers) continue
@@ -127,9 +104,9 @@ module.exports = function generateCode (hyperdb, { directory = '.', esm = false 
   str += ']\n\n'
 
   if (esm) {
-    str += 'export default { version, collections, indexes, resolveCollection, resolveIndex }\n'
+    str += 'export default { versions, collections, indexes, resolveCollection, resolveIndex }\n'
   } else {
-    str += 'module.exports = { version, collections, indexes, resolveCollection, resolveIndex }\n'
+    str += 'module.exports = { versions, collections, indexes, resolveCollection, resolveIndex }\n'
   }
 
   str += '\n'
@@ -220,9 +197,9 @@ function generateCollectionDefinition (collection) {
   }
 
   str += `// ${s(collection.fqn)} reconstruction function\n`
-  str += `function ${id}_reconstruct (version, keyBuf, valueBuf) {\n`
+  str += `function ${id}_reconstruct (schemaVersion, keyBuf, valueBuf) {\n`
   if (collection.key.length) str += `  const key = ${id}_key.decode(keyBuf)\n`
-  str += '  setVersion(version)\n'
+  str += '  setVersion(schemaVersion)\n'
   str += '  const state = { start: 0, end: valueBuf.byteLength, buffer: valueBuf }\n'
 
   if (v > 0 && !collection.versionField) {
@@ -257,6 +234,7 @@ function generateCollectionDefinition (collection) {
   str += `const ${id} = {\n`
   str += `  name: ${s(collection.fqn)},\n`
   str += `  id: ${collection.id},\n`
+  str += `  version: ${collection.version},\n`
   str += generateEncodeCollectionKey(collection, ',')
   str += generateEncodeKeyRange(collection, ',')
   str += generateEncodeCollectionValue(collection, ',')
@@ -278,6 +256,7 @@ function generateIndexDefinition (index) {
   str += `// ${s(index.fqn)}\n`
   str += `const ${id} = {\n`
   str += `  name: ${s(index.fqn)},\n`
+  str += `  version: ${index.version},\n`
   str += `  id: ${index.id},\n`
   str += generateEncodeIndexKey(index, ',')
   str += generateEncodeKeyRange(index, ',')
@@ -318,12 +297,12 @@ function generateEncodeCollectionValue (collection, sep) {
   const end = (v > 0 && !collection.versionField) ? (getUintLength(v) + 1) : 0
 
   let str = ''
-  str += '  encodeValue (version, record) {\n'
-  str += '    setVersion(version)\n'
+  str += '  encodeValue (schemaVersion, collectionVersion, record) {\n'
+  str += '    setVersion(schemaVersion)\n'
   str += `    const state = { start: 0, end: ${end}, buffer: null }\n`
 
   if (collection.versionField) {
-    str += `${gen('record', collection.versionField)} = ${v}\n`
+    str += `${gen('record', collection.versionField)} = collectionVersion\n`
   }
 
   str += `    ${id}_enc.preencode(state, record)\n`
@@ -332,9 +311,9 @@ function generateEncodeCollectionValue (collection, sep) {
   if (v > 0 && !collection.versionField) {
     str += `    state.buffer[state.start++] = ${COLLECTION_TYPE}\n`
     if (getUintLength(v) === 0) {
-      str += `    state.buffer[state.start++] = ${v}\n`
+      str += '    state.buffer[state.start++] = collectionVersion\n'
     } else {
-      str += `    c.uint.encode(state, ${v})\n`
+      str += '    c.uint.encode(state, collectionVersion)\n'
     }
   }
 

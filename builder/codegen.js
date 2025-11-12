@@ -182,7 +182,9 @@ function generateCommonPrefix (type) {
 
 function generateCollectionDefinition (collection) {
   const id = getId(collection)
-  const v = collection.version
+
+  const versionedUserland = !!collection.versionField
+  const versioned = collection.version > 0 && !versionedUserland
 
   let str = generateCommonPrefix(collection)
 
@@ -202,7 +204,7 @@ function generateCollectionDefinition (collection) {
   str += '  setVersion(schemaVersion)\n'
   str += '  const state = { start: 0, end: valueBuf.byteLength, buffer: valueBuf }\n'
 
-  if (v > 0 && !collection.versionField) {
+  if (versioned) {
     str += '  const type = c.uint.decode(state)\n'
     str += `  if (type !== ${COLLECTION_TYPE}) throw new Error('Unknown collection type: ' + type)\n`
     str += `  ${id}.decodedVersion = c.uint.decode(state)\n`
@@ -215,7 +217,7 @@ function generateCollectionDefinition (collection) {
     str += `  ${getKeyPath(key, 'record', false)} = key[${i}]\n`
   }
 
-  if (collection.versionField) {
+  if (versionedUserland) {
     str += `  ${id}.decodedVersion = ${gen('record', collection.versionField)}\n`
   }
 
@@ -293,24 +295,27 @@ function generateEncodeKeyRange (index, sep) {
 
 function generateEncodeCollectionValue (collection, sep) {
   const id = getId(collection)
-  const v = collection.version
-  const end = (v > 0 && !collection.versionField) ? (getUintLength(v) + 1) : 0
+  const versionedUserland = !!collection.versionField
+  const versioned = collection.version > 0 && !versionedUserland
+  const maxEnd = versioned ? (getUintLength(collection.version) + 1) : 0
 
   let str = ''
   str += '  encodeValue (schemaVersion, collectionVersion, record) {\n'
   str += '    setVersion(schemaVersion)\n'
-  str += `    const state = { start: 0, end: ${end}, buffer: null }\n`
+  str += `    const state = { start: 0, end: ${maxEnd}, buffer: null }\n`
 
-  if (collection.versionField) {
+  if (versionedUserland) {
     str += `${gen('record', collection.versionField)} = collectionVersion\n`
   }
 
   str += `    ${id}_enc.preencode(state, record)\n`
   str += '    state.buffer = b4a.allocUnsafe(state.end)\n'
 
-  if (v > 0 && !collection.versionField) {
+  if (versioned) {
     str += `    state.buffer[state.start++] = ${COLLECTION_TYPE}\n`
-    if (getUintLength(v) === 0) {
+
+    // collectionVersion is always <= collection.version so lets see if we can optimise
+    if (getUintLength(collection.version) === 1) {
       str += '    state.buffer[state.start++] = collectionVersion\n'
     } else {
       str += '    c.uint.encode(state, collectionVersion)\n'
@@ -318,7 +323,14 @@ function generateEncodeCollectionValue (collection, sep) {
   }
 
   str += `    ${id}_enc.encode(state, record)\n`
-  str += '    return state.buffer\n'
+
+  if (versioned && getUintLength(collection.version) > 1) {
+    // we might have over allocated if the runtime version is low - dbl check
+    str += '    return state.buffer.subarray(0, state.start)\n'
+  } else {
+    str += '    return state.buffer\n'
+  }
+
   str += `  }${sep}\n`
   return str
 }

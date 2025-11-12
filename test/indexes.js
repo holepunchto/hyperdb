@@ -191,6 +191,22 @@ test('delete on an index', async function ({ build }, t) {
   await db.close()
 })
 
+test('Insert on an index with int key', async function ({ build }, t) {
+  const db = await build(createExampleDB)
+
+  const expected = { int: 8 }
+  await db.insert('@example/signed-int', expected)
+
+  await db.flush()
+
+  {
+    const doc = await db.get('@example/signed-int', {})
+    t.alike(doc, expected)
+  }
+
+  await db.close()
+})
+
 function createExampleDB (HyperDB, Hyperschema, paths) {
   const schema = Hyperschema.from(paths.schema)
   const example = schema.namespace('example')
@@ -226,6 +242,17 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
     ]
   })
 
+  example.register({
+    name: 'signed-int',
+    fields: [
+      {
+        name: 'int',
+        type: 'int8',
+        required: true
+      }
+    ]
+  })
+
   Hyperschema.toDisk(schema)
 
   const db = HyperDB.from(paths.schema, paths.db)
@@ -243,6 +270,12 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
     name: 'members',
     schema: '@example/member',
     key: ['name']
+  })
+
+  exampleDB.collections.register({
+    name: 'signed-int',
+    schema: '@example/signed-int',
+    key: ['int']
   })
 
   exampleDB.indexes.register({

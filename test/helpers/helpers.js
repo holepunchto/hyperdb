@@ -22,6 +22,6 @@ exports.triggerCountMembers = async (db, key, record) => {
 }
 
 exports.mapMiddleAge = (record, context) => {
-  if (record.age > 40 || record.age < 60) return []
-  return [record.age]
+  if (record.age > 40 && record.age < 60) return [record.age]
+  return []
 }

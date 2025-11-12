@@ -177,23 +177,28 @@ test('delete on an index', async function ({ build }, t) {
   await db.close()
 })
 
-test.solo('new index on an old collection', async function ({ build }, t) {
+test('new index on an old collection', async function ({ build }, t) {
   const dir = await tmp(t, { dir: path.join(__dirname, 'fixtures/tmp') })
   const db = await build(createExampleDB, { dir })
 
   await db.insert('@example/members', { name: 'boy', age: 16 })
+  await db.insert('@example/members', { name: 'middle', age: 50 })
 
   {
     const all = await db.find('@example/teenagers').toArray()
     t.is(all.length, 1)
   }
 
+  await db.flush()
   await db.close()
 
   const dbNewIndex = await build(createExampleDBWithNewIndex, { dir })
 
   await dbNewIndex.insert('@example/members', { name: 'girl', age: 13 })
   await dbNewIndex.insert('@example/members', { name: 'elon', age: 54 })
+
+  // reinserting and it should figure
+  await dbNewIndex.insert('@example/members', { name: 'middle', age: 50 })
 
   {
     const all = await dbNewIndex.find('@example/teenagers').toArray()
@@ -202,7 +207,7 @@ test.solo('new index on an old collection', async function ({ build }, t) {
 
   {
     const all = await dbNewIndex.find('@example/middle-age').toArray()
-    t.is(all.length, 1)
+    t.is(all.length, 2)
   }
 
   await dbNewIndex.close()
@@ -468,7 +473,6 @@ function createExampleDBWithNewIndex (HyperDB, Hyperschema, paths) {
   exampleDB.indexes.register({
     name: 'middle-age',
     collection: '@example/members',
-    unique: true,
     key: {
       type: 'uint',
       map: 'mapMiddleAge'

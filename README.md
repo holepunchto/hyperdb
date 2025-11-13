@@ -31,13 +31,13 @@ example.register({
     {
       name: 'name',
       type: 'string',
-      required: true,
+      required: true
     },
     {
       name: 'age',
       type: 'uint',
-      required: true,
-    },
+      required: true
+    }
   ]
 })
 Hyperschema.toDisk(schema)
@@ -63,7 +63,7 @@ exampleDB.indexes.register({
   unique: true,
   key: {
     type: 'string',
-    map: 'mapNameToLowerCase',
+    map: 'mapNameToLowerCase'
   }
 })
 
@@ -84,7 +84,7 @@ Run `node build.js` to build the spec.
 
 Then boot your db. You can use the same definition for a fully local db and a P2P one.
 
-``` js
+```js
 // run.mjs
 import HyperDB from 'hyperdb'
 import def from './spec/hyperdb/index.js'
@@ -140,7 +140,7 @@ Query the database. `collectionOrIndex` is the identifier you defined in your bu
 
 The query looks like this
 
-``` js
+```js
 {
   gt: { ... },
   gte: { ... },
@@ -237,13 +237,13 @@ Make a writable snapshot of the database. All reads/streams are locked in time o
 When you flush this one, it updates the main instance also.
 
 Warnings:
+
 - Transactions must always be closed. Flushing a transaction closes it, but when a transaction is cancelled (for example due to an error), `transaction.close()` has to be called explicitly.
 - Transactions must not be run in parallel. If you do not want to write your own locking mechanism, use `await db.exclusiveTransaction()` instead.
 
 #### `db = await db.exclusiveTransaction()`
 
 Like `db.transaction()`, but with a built-in lock to ensure transactions do not run concurrently.
-
 
 #### `await db.ready()`
 
@@ -347,10 +347,11 @@ db.collections.register({
 `trigger` is a callback run when an entry is modified and can be used to update other entries in the database. The callback should be registered via `db.require(path)` and should have the following function signature:
 
 ```js
-async function triggerCallback (db, query, record) {}
+async function triggerCallback(db, query, record) {}
 ```
 
 Trigger callback arguments:
+
 - `db` is the `hyperdb` instance.
 - `query` is the query being used to update the database. In the case of `db.insert()` the `query` is the document being inserted.
 - `record` is the document being inserted, if `null` the document matching `query` is being deleted.
@@ -429,9 +430,7 @@ The return type of the mapping callback is always an array but the type of the e
 
 ```js
 // helpers.js
-exports.keyMap = (record, context) => [
-  { name: record.name, age: record.age }
-]
+exports.keyMap = (record, context) => [{ name: record.name, age: record.age }]
 
 // schema.js
 // ... Defining db, it's collections
@@ -440,7 +439,8 @@ db.indexes.register({
   name: 'mapped-index',
   collection: '@ns/collection',
   key: {
-    type: { // a struct
+    type: {
+      // a struct
       fields: [
         {
           name: 'name',

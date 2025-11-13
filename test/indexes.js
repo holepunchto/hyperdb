@@ -213,7 +213,7 @@ test('new index on an old collection', async function ({ build }, t) {
   await dbNewIndex.close()
 })
 
-function createExampleDB (HyperDB, Hyperschema, paths) {
+function createExampleDB(HyperDB, Hyperschema, paths) {
   const schema = Hyperschema.from(paths.schema)
   const example = schema.namespace('example')
 
@@ -299,7 +299,7 @@ function createExampleDB (HyperDB, Hyperschema, paths) {
   HyperDB.toDisk(db)
 }
 
-function createExampleDBWithDeprecation (HyperDB, Hyperschema, paths) {
+function createExampleDBWithDeprecation(HyperDB, Hyperschema, paths) {
   const schema = Hyperschema.from(paths.schema)
   const example = schema.namespace('example')
 
@@ -386,7 +386,7 @@ function createExampleDBWithDeprecation (HyperDB, Hyperschema, paths) {
   HyperDB.toDisk(db)
 }
 
-function createExampleDBWithNewIndex (HyperDB, Hyperschema, paths) {
+function createExampleDBWithNewIndex(HyperDB, Hyperschema, paths) {
   const schema = Hyperschema.from(paths.schema)
   const example = schema.namespace('example')
 

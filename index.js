@@ -487,7 +487,7 @@ class HyperDB {
       if (u !== null && checkout === -1) {
         return u.value === null
           ? null
-          : index.collection.reconstruct(this.versions.schema, u.key, u.value, null)
+          : index.collection.reconstruct(this.versions.schema, u.key, u.value)
       }
 
       const value = await snap.get(key, checkout, this.activeRequests)

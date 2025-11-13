@@ -34,7 +34,7 @@ test('simple trigger that makes a manual count', async function ({ build }, t) {
   await db.close()
 })
 
-function createExampleDB (HyperDB, Hyperschema, paths) {
+function createExampleDB(HyperDB, Hyperschema, paths) {
   const schema = Hyperschema.from(paths.schema)
   const example = schema.namespace('example')
 

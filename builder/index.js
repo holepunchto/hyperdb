@@ -12,7 +12,7 @@ const CODE_FILE_NAME = 'index.js'
 const MESSAGES_FILE_NAME = 'messages.js'
 
 class DBType {
-  constructor (builder, namespace, description) {
+  constructor(builder, namespace, description) {
     this.builder = builder
     this.namespace = namespace
     this.description = description
@@ -35,11 +35,11 @@ class DBType {
     }
   }
 
-  getNamespace () {
+  getNamespace() {
     return this.builder.namespaces.get(this.namespace)
   }
 
-  _resolveKey (schema, path) {
+  _resolveKey(schema, path) {
     const components = path.split('.')
 
     let current = schema
@@ -55,7 +55,7 @@ class DBType {
     return resolved
   }
 
-  toJSON () {
+  toJSON() {
     return {
       name: this.description.name,
       unsafe: this.description.unsafe,
@@ -66,13 +66,13 @@ class DBType {
 }
 
 class Collection extends DBType {
-  constructor (builder, namespace, description) {
+  constructor(builder, namespace, description) {
     super(builder, namespace, description)
 
     const updated = isGenesis(description) && isVersioned(description)
 
     this.isCollection = true
-    this.version = updated ? builder._bump() : (description.version || 0)
+    this.version = updated ? builder._bump() : description.version || 0
     this.versionField = description.versionField || null
     this.derived = !!description.derived
     this.indexes = []
@@ -82,7 +82,10 @@ class Collection extends DBType {
 
     this.key = description.key || []
     this.fullKey = this.key
-    this.trigger = (typeof description.trigger === 'function') ? description.trigger.toString() : (description.trigger || null)
+    this.trigger =
+      typeof description.trigger === 'function'
+        ? description.trigger.toString()
+        : description.trigger || null
 
     this.keyEncoding = []
 
@@ -99,12 +102,17 @@ class Collection extends DBType {
     this.valueEncoding = this._deriveValueSchema().fqn
   }
 
-  _bump () {
+  _bump() {
     this.version = this.builder._bump()
     return this.version
   }
 
-  _deriveValueSchema (schema = this.schema, prefix = '', primaryKeySet = new Set(this.key), parents = new Set()) {
+  _deriveValueSchema(
+    schema = this.schema,
+    prefix = '',
+    primaryKeySet = new Set(this.key),
+    parents = new Set()
+  ) {
     const fields = []
     const type = '/hyperdb#' + this.id
 
@@ -120,7 +128,9 @@ class Collection extends DBType {
 
       if (primaryKeySet.has(name)) {
         external = cpy.external = true
-      } else if (this._deriveValueSchema(f.type, name, primaryKeySet, new Set([...parents])).external) {
+      } else if (
+        this._deriveValueSchema(f.type, name, primaryKeySet, new Set([...parents])).external
+      ) {
         external = true
       }
 
@@ -143,13 +153,13 @@ class Collection extends DBType {
     return { external: true, fqn: getFQN(schema.namespace, schema.name + type) }
   }
 
-  toJSON () {
+  toJSON() {
     return {
       ...super.toJSON(),
       type: COLLECTION_TYPE,
       version: this.version,
       versionField: this.versionField,
-      indexes: this.indexes.map(i => i.fqn),
+      indexes: this.indexes.map((i) => i.fqn),
       schema: this.schema.fqn,
       derived: this.derived,
       key: this.key,
@@ -159,14 +169,14 @@ class Collection extends DBType {
 }
 
 class Index extends DBType {
-  constructor (builder, namespace, description) {
+  constructor(builder, namespace, description) {
     super(builder, namespace, description)
 
     const updated = isGenesis(description) && isVersioned(description)
     const collection = this.builder.typesByName.get(description.collection)
 
     this.isIndex = true
-    this.version = updated ? collection._bump() : (description.version || 0)
+    this.version = updated ? collection._bump() : description.version || 0
     this.unique = !!description.unique
     this.deprecated = !!description.deprecated
     this.isMapped = !Array.isArray(description.key)
@@ -186,7 +196,7 @@ class Index extends DBType {
 
     this.map = null
     if (this.isMapped) {
-      this.map = (typeof this.key.map === 'function') ? this.key.map.toString() : this.key.map
+      this.map = typeof this.key.map === 'function' ? this.key.map.toString() : this.key.map
     }
 
     // Key encoding will be an IndexEncoder of the secondary index's key fields
@@ -222,7 +232,7 @@ class Index extends DBType {
     }
   }
 
-  toJSON () {
+  toJSON() {
     return {
       ...super.toJSON(),
       type: INDEX_TYPE,
@@ -234,36 +244,36 @@ class Index extends DBType {
         ? this.key
         : {
             type: this.key.type,
-            map: (typeof this.key.map === 'function') ? this.key.map.toString() : this.key.map
+            map: typeof this.key.map === 'function' ? this.key.map.toString() : this.key.map
           }
     }
   }
 }
 
 class BuilderCollections {
-  constructor (namespace) {
+  constructor(namespace) {
     this.builder = namespace.builder
     this.namespace = namespace
   }
 
-  register (description) {
+  register(description) {
     this.builder.registerCollection(description, this.namespace.name)
   }
 }
 
 class BuilderIndexes {
-  constructor (namespace) {
+  constructor(namespace) {
     this.builder = namespace.builder
     this.namespace = namespace
   }
 
-  register (description) {
+  register(description) {
     this.builder.registerIndex(description, this.namespace.name)
   }
 }
 
 class BuilderNamespace {
-  constructor (builder, name, { prefix = [] } = {}) {
+  constructor(builder, name, { prefix = [] } = {}) {
     this.builder = builder
     this.name = name
     this.prefix = prefix
@@ -276,11 +286,11 @@ class BuilderNamespace {
     this.descriptions = []
   }
 
-  require (filename) {
+  require(filename) {
     this.helpers = p.resolve(filename)
   }
 
-  toJSON () {
+  toJSON() {
     return {
       name: this.name,
       prefix: this.prefix
@@ -289,7 +299,7 @@ class BuilderNamespace {
 }
 
 class Builder {
-  constructor (schema, dbJson, { offset = 0, dbDir = null, schemaDir = null, version = 0 } = {}) {
+  constructor(schema, dbJson, { offset = 0, dbDir = null, schemaDir = null, version = 0 } = {}) {
     this.schema = schema
     this.version = dbJson ? dbJson.version : version
     this.offset = dbJson ? dbJson.offset : offset
@@ -322,7 +332,7 @@ class Builder {
 
   static esm = false
 
-  setVersion (version) {
+  setVersion(version) {
     if (version < this.version) {
       throw new Error('Not allowed to go back in time')
     }
@@ -331,12 +341,12 @@ class Builder {
     return this.version
   }
 
-  _bump () {
+  _bump() {
     if (this.bumped) return this.version
     return this.setVersion(this.version + 1)
   }
 
-  _assignId (type) {
+  _assignId(type) {
     const unsafe = type.description.unsafe
     if (unsafe) {
       if (unsafe.prefix && !Number.isInteger(unsafe.id)) {
@@ -347,7 +357,7 @@ class Builder {
     return { id: this.currentOffset++, prefix: null }
   }
 
-  registerCollection (description, namespace) {
+  registerCollection(description, namespace) {
     const fqn = getFQN(namespace, description.name)
     const existing = this.typesByName.get(fqn)
 
@@ -364,7 +374,7 @@ class Builder {
     this.typesByName.set(collection.fqn, collection)
   }
 
-  registerIndex (description, namespace) {
+  registerIndex(description, namespace) {
     const fqn = getFQN(namespace, description.name)
     const existing = this.typesByName.get(fqn)
 
@@ -381,22 +391,22 @@ class Builder {
     this.typesByName.set(index.fqn, index)
   }
 
-  namespace (name, opts) {
+  namespace(name, opts) {
     if (this.namespaces.has(name)) throw new Error('Namespace already exists: ' + name)
     const ns = new BuilderNamespace(this, name, opts)
     this.namespaces.set(name, ns)
     return ns
   }
 
-  toJSON () {
+  toJSON() {
     return {
       version: this.version,
       offset: this.offset,
-      schema: this.orderedTypes.map(t => t.toJSON())
+      schema: this.orderedTypes.map((t) => t.toJSON())
     }
   }
 
-  static toDisk (hyperdb, dbDir, opts = {}) {
+  static toDisk(hyperdb, dbDir, opts = {}) {
     if (typeof dbDir === 'object' && dbDir) {
       opts = dbDir
       dbDir = null
@@ -412,10 +422,12 @@ class Builder {
 
     fs.writeFileSync(messagesPath, hyperdb.schema.toCode({ esm }), { encoding: 'utf-8' })
     fs.writeFileSync(dbJsonPath, JSON.stringify(hyperdb.toJSON(), null, 2), { encoding: 'utf-8' })
-    fs.writeFileSync(codePath, generateCode(hyperdb, { directory: dbDir, esm }), { encoding: 'utf-8' })
+    fs.writeFileSync(codePath, generateCode(hyperdb, { directory: dbDir, esm }), {
+      encoding: 'utf-8'
+    })
   }
 
-  static from (schemaJson, dbJson, opts) {
+  static from(schemaJson, dbJson, opts) {
     const schema = Hyperschema.from(schemaJson)
     if (typeof dbJson === 'string') {
       const jsonFilePath = p.join(p.resolve(dbJson), DB_JSON_FILE_NAME)
@@ -436,12 +448,12 @@ class Builder {
 
 module.exports = Builder
 
-function getFQN (namespace, name) {
+function getFQN(namespace, name) {
   if (namespace === null) return name
   return '@' + namespace + '/' + name
 }
 
-function resolvePathToType (name, schema) {
+function resolvePathToType(name, schema) {
   const parts = name.split('.')
 
   let field = schema.fieldsByName.get(parts[0])
@@ -453,11 +465,11 @@ function resolvePathToType (name, schema) {
   return field
 }
 
-function isGenesis (schema) {
+function isGenesis(schema) {
   return schema.id === undefined
 }
 
-function isVersioned (schema) {
+function isVersioned(schema) {
   if (isGenesis(schema)) return true
   if (schema.versionField) return true
   return schema.version !== undefined && schema.version !== 0

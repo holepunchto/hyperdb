@@ -22,7 +22,7 @@ example.register({
       required: true
     },
     {
-      name: 'field1',
+      name: 'field2',
       type: 'uint',
       required: true
     }
@@ -90,6 +90,10 @@ example.register({
     {
       name: 'count',
       type: 'uint'
+    },
+    {
+      name: 'yoloVersion',
+      type: 'uint'
     }
   ]
 })
@@ -104,7 +108,8 @@ exampleDb.require('./helpers.js')
 exampleDb.collections.register({
   name: 'collection1-info',
   schema: '@example/collection-info',
-  derived: true
+  derived: true,
+  versionField: 'yoloVersion'
 })
 
 exampleDb.collections.register({
@@ -139,6 +144,12 @@ exampleDb.indexes.register({
   collection: '@example/collection1',
   key: ['id3'],
   unique: true
+})
+
+exampleDb.indexes.register({
+  name: 'collection1-by-id4',
+  collection: '@example/collection1',
+  key: ['id3']
 })
 
 exampleDb.indexes.register({

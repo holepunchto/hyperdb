@@ -68,7 +68,12 @@ class DBType {
 class Collection extends DBType {
   constructor (builder, namespace, description) {
     super(builder, namespace, description)
+
+    const updated = isGenesis(description) && isVersioned(description)
+
     this.isCollection = true
+    this.version = updated ? builder._bump() : (description.version || 0)
+    this.versionField = description.versionField || null
     this.derived = !!description.derived
     this.indexes = []
 
@@ -92,6 +97,11 @@ class Collection extends DBType {
 
     // Register a value encoding type (the portion of the record that will not be in the primary key)
     this.valueEncoding = this._deriveValueSchema().fqn
+  }
+
+  _bump () {
+    this.version = this.builder._bump()
+    return this.version
   }
 
   _deriveValueSchema (schema = this.schema, prefix = '', primaryKeySet = new Set(this.key), parents = new Set()) {
@@ -137,6 +147,8 @@ class Collection extends DBType {
     return {
       ...super.toJSON(),
       type: COLLECTION_TYPE,
+      version: this.version,
+      versionField: this.versionField,
       indexes: this.indexes.map(i => i.fqn),
       schema: this.schema.fqn,
       derived: this.derived,
@@ -149,12 +161,17 @@ class Collection extends DBType {
 class Index extends DBType {
   constructor (builder, namespace, description) {
     super(builder, namespace, description)
+
+    const updated = isGenesis(description) && isVersioned(description)
+    const collection = this.builder.typesByName.get(description.collection)
+
     this.isIndex = true
+    this.version = updated ? collection._bump() : (description.version || 0)
     this.unique = !!description.unique
     this.deprecated = !!description.deprecated
     this.isMapped = !Array.isArray(description.key)
 
-    this.collection = this.builder.typesByName.get(description.collection)
+    this.collection = collection
     this.keyEncoding = []
 
     if (!this.collection || !this.collection.isCollection) {
@@ -209,6 +226,7 @@ class Index extends DBType {
     return {
       ...super.toJSON(),
       type: INDEX_TYPE,
+      version: this.version,
       collection: this.description.collection,
       unique: this.unique,
       deprecated: this.deprecated,
@@ -271,9 +289,9 @@ class BuilderNamespace {
 }
 
 class Builder {
-  constructor (schema, dbJson, { offset = 0, dbDir = null, schemaDir = null } = {}) {
+  constructor (schema, dbJson, { offset = 0, dbDir = null, schemaDir = null, version = 0 } = {}) {
     this.schema = schema
-    this.version = dbJson ? dbJson.version : 0
+    this.version = dbJson ? dbJson.version : version
     this.offset = dbJson ? dbJson.offset : offset
     this.dbDir = dbDir
     this.schemaDir = schemaDir
@@ -297,9 +315,26 @@ class Builder {
       }
     }
     this.initializing = false
+    this.bumped = false
+
+    if (version > this.version) this.setVersion(version)
   }
 
   static esm = false
+
+  setVersion (version) {
+    if (version < this.version) {
+      throw new Error('Not allowed to go back in time')
+    }
+    this.bumped = true
+    this.version = version
+    return this.version
+  }
+
+  _bump () {
+    if (this.bumped) return this.version
+    return this.setVersion(this.version + 1)
+  }
 
   _assignId (type) {
     const unsafe = type.description.unsafe
@@ -314,8 +349,14 @@ class Builder {
 
   registerCollection (description, namespace) {
     const fqn = getFQN(namespace, description.name)
+    const existing = this.typesByName.get(fqn)
+
     // TODO: also validate this for invalid mutations if it was hydrated from JSON
-    if (this.typesByName.has(fqn)) return
+    if (existing) {
+      // allow updating the version field
+      if (description.versionField) existing.versionField = description.versionField
+      return
+    }
 
     const collection = new Collection(this, namespace, description)
 
@@ -410,4 +451,14 @@ function resolvePathToType (name, schema) {
   }
 
   return field
+}
+
+function isGenesis (schema) {
+  return schema.id === undefined
+}
+
+function isVersioned (schema) {
+  if (isGenesis(schema)) return true
+  if (schema.versionField) return true
+  return schema.version !== undefined && schema.version !== 0
 }

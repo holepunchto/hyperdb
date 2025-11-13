@@ -1,32 +1,10 @@
-/*
-const contract = require('./description.js')
-const version = contract.version //schema version
-const indexes = contract.indexes
-const collections = contract.collections
-const type = contract.resolveCollection('@keet/devices')
-{
-  name: '@keet/devices',
-  encodeKey, -> full record (index encode internally) to buffer
-  encodeKeyRange, -> range options with full records (index encode internally) -> (all gt/lte options set)
-  encodeValue(version, value) -> full record to buffer
-  reconstruct(version, keyBuffer, valueBuffer) -> { ...key, ...value }, (only on coll)
-  indexes
-}
-
-const type = contract.resolveIndex('@keet/devices-by-name')
-{
-  name: '@keet/devices-by-name',
-  offset, -> position in the collection's index array
-  encodeKeys, -> full record (index encode internally) to an array of buffers
-  encodeKeyRange, -> range options with full records (index encode internally) -> (all gt/lte options set)
-  collection
-}
-*/
-
+const c = require('compact-encoding')
 const gen = require('generate-object-property')
 const s = require('generate-string')
 const p = require('path')
 const pkg = require('../package.json')
+
+const COLLECTION_TYPE = 0
 
 const IndexTypeMap = new Map([
   ['uint', 'IndexEncoder.UINT'],
@@ -72,14 +50,16 @@ module.exports = function generateCode (hyperdb, { directory = '.', esm = false 
   str += '/* eslint-disable camelcase */\n'
   str += '\n'
   if (esm) {
-    str += `import { IndexEncoder, c } from '${pkg.name}/runtime'\n`
+    str += `import { IndexEncoder, c, b4a } from '${pkg.name}/runtime'\n`
     str += 'import { version, getEncoding, setVersion } from \'./messages.js\'\n'
     str += '\n'
   } else {
-    str += `const { IndexEncoder, c } = require('${pkg.name}/runtime')\n`
+    str += `const { IndexEncoder, c, b4a } = require('${pkg.name}/runtime')\n`
     str += 'const { version, getEncoding, setVersion } = require(\'./messages.js\')\n'
     str += '\n'
   }
+
+  str += `const versions = { schema: version, db: ${hyperdb.version} }\n\n`
 
   let addedHelper = false
   for (const ns of hyperdb.namespaces.values()) {
@@ -124,9 +104,9 @@ module.exports = function generateCode (hyperdb, { directory = '.', esm = false 
   str += ']\n\n'
 
   if (esm) {
-    str += 'export default { version, collections, indexes, resolveCollection, resolveIndex }\n'
+    str += 'export default { versions, collections, indexes, resolveCollection, resolveIndex }\n'
   } else {
-    str += 'module.exports = { version, collections, indexes, resolveCollection, resolveIndex }\n'
+    str += 'module.exports = { versions, collections, indexes, resolveCollection, resolveIndex }\n'
   }
 
   str += '\n'
@@ -203,6 +183,9 @@ function generateCommonPrefix (type) {
 function generateCollectionDefinition (collection) {
   const id = getId(collection)
 
+  const versionedUserland = !!collection.versionField
+  const versioned = collection.version > 0 && !versionedUserland
+
   let str = generateCommonPrefix(collection)
 
   str += `// ${s(collection.fqn)} value encoding\n`
@@ -216,14 +199,26 @@ function generateCollectionDefinition (collection) {
   }
 
   str += `// ${s(collection.fqn)} reconstruction function\n`
-  str += `function ${id}_reconstruct (version, keyBuf, valueBuf) {\n`
+  str += `function ${id}_reconstruct (schemaVersion, keyBuf, valueBuf) {\n`
   if (collection.key.length) str += `  const key = ${id}_key.decode(keyBuf)\n`
-  str += '  setVersion(version)\n'
-  str += `  const record = c.decode(${id}_enc, valueBuf)\n`
+  str += '  setVersion(schemaVersion)\n'
+  str += '  const state = { start: 0, end: valueBuf.byteLength, buffer: valueBuf }\n'
+
+  if (versioned) {
+    str += '  const type = c.uint.decode(state)\n'
+    str += `  if (type !== ${COLLECTION_TYPE}) throw new Error('Unknown collection type: ' + type)\n`
+    str += `  ${id}.decodedVersion = c.uint.decode(state)\n`
+  }
+
+  str += `  const record = ${id}_enc.decode(state)\n`
 
   for (let i = 0; i < collection.key.length; i++) {
     const key = collection.key[i]
     str += `  ${getKeyPath(key, 'record', false)} = key[${i}]\n`
+  }
+
+  if (versionedUserland) {
+    str += `  ${id}.decodedVersion = ${gen('record', collection.versionField)}\n`
   }
 
   str += '  return record\n'
@@ -241,13 +236,15 @@ function generateCollectionDefinition (collection) {
   str += `const ${id} = {\n`
   str += `  name: ${s(collection.fqn)},\n`
   str += `  id: ${collection.id},\n`
+  str += `  version: ${collection.version},\n`
   str += generateEncodeCollectionKey(collection, ',')
   str += generateEncodeKeyRange(collection, ',')
   str += generateEncodeCollectionValue(collection, ',')
   str += `  trigger: ${collection.trigger ? id + '_trigger' : 'null'},\n`
   str += `  reconstruct: ${id}_reconstruct,\n`
   str += `  reconstructKey: ${id}_reconstruct_key,\n`
-  str += '  indexes: []\n'
+  str += '  indexes: [],\n'
+  str += '  decodedVersion: 0\n'
   str += '}\n'
   return str
 }
@@ -261,10 +258,11 @@ function generateIndexDefinition (index) {
   str += `// ${s(index.fqn)}\n`
   str += `const ${id} = {\n`
   str += `  name: ${s(index.fqn)},\n`
+  str += `  version: ${index.version},\n`
   str += `  id: ${index.id},\n`
   str += generateEncodeIndexKey(index, ',')
   str += generateEncodeKeyRange(index, ',')
-  str += `  encodeValue: (doc) => ${id}.collection.encodeKey(doc),\n`
+  str += `  encodeValue: (record) => ${id}.collection.encodeKey(record),\n`
   str += generateEncodeIndexKeys(index, ',')
   str += '  reconstruct: (keyBuf, valueBuf) => valueBuf,\n'
   str += `  offset: ${offset},\n`
@@ -297,11 +295,42 @@ function generateEncodeKeyRange (index, sep) {
 
 function generateEncodeCollectionValue (collection, sep) {
   const id = getId(collection)
+  const versionedUserland = !!collection.versionField
+  const versioned = collection.version > 0 && !versionedUserland
+  const maxEnd = versioned ? (getUintLength(collection.version) + 1) : 0
 
   let str = ''
-  str += '  encodeValue (version, record) {\n'
-  str += '    setVersion(version)\n'
-  str += `    return c.encode(${id}_enc, record)\n`
+  str += '  encodeValue (schemaVersion, collectionVersion, record) {\n'
+  str += '    setVersion(schemaVersion)\n'
+  str += `    const state = { start: 0, end: ${maxEnd}, buffer: null }\n`
+
+  if (versionedUserland) {
+    str += `${gen('record', collection.versionField)} = collectionVersion\n`
+  }
+
+  str += `    ${id}_enc.preencode(state, record)\n`
+  str += '    state.buffer = b4a.allocUnsafe(state.end)\n'
+
+  if (versioned) {
+    str += `    state.buffer[state.start++] = ${COLLECTION_TYPE}\n`
+
+    // collectionVersion is always <= collection.version so lets see if we can optimise
+    if (getUintLength(collection.version) === 1) {
+      str += '    state.buffer[state.start++] = collectionVersion\n'
+    } else {
+      str += '    c.uint.encode(state, collectionVersion)\n'
+    }
+  }
+
+  str += `    ${id}_enc.encode(state, record)\n`
+
+  if (versioned && getUintLength(collection.version) > 1) {
+    // we might have over allocated if the runtime version is low - dbl check
+    str += '    return state.buffer.subarray(0, state.start)\n'
+  } else {
+    str += '    return state.buffer\n'
+  }
+
   str += `  }${sep}\n`
   return str
 }
@@ -434,4 +463,10 @@ function getKeyPath (key, name, optional) {
   if (key === null) return name
   const r = (a, b, i) => (i === 0 || !optional) ? gen(a, b) : gen.optional(a, b)
   return key.split('.').reduce(r, name)
+}
+
+function getUintLength (n) {
+  const state = { buffer: null, start: 0, end: 0 }
+  c.uint.preencode(state, n)
+  return state.end
 }

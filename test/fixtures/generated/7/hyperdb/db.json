@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "offset": 0,
+  "schema": [
+    {
+      "name": "members",
+      "namespace": "db",
+      "id": 0,
+      "type": 1,
+      "version": 1,
+      "versionField": null,
+      "indexes": [],
+      "schema": "@db/member",
+      "derived": false,
+      "key": [
+        "name"
+      ],
+      "trigger": null
+    }
+  ]
+}

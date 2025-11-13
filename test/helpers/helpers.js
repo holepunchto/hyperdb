@@ -20,3 +20,8 @@ exports.triggerCountMembers = async (db, key, record) => {
 
   await db.insert('@example/digest', digest)
 }
+
+exports.mapMiddleAge = (record, context) => {
+  if (record.age > 40 && record.age < 60) return [record.age]
+  return []
+}

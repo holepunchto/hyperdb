@@ -1,0 +1,63 @@
+{
+  "version": 2,
+  "schema": [
+    {
+      "name": "gender",
+      "namespace": "db",
+      "offset": 1,
+      "enum": [
+        {
+          "key": "NotSpecified",
+          "version": 1
+        },
+        {
+          "key": "Male",
+          "version": 1
+        },
+        {
+          "key": "Female",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "birth",
+      "namespace": "db",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "year",
+          "required": true,
+          "type": "uint",
+          "version": 1
+        }
+      ]
+    },
+    {
+      "name": "member",
+      "namespace": "db",
+      "compact": false,
+      "flagsPosition": 2,
+      "fields": [
+        {
+          "name": "name",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "gender",
+          "required": true,
+          "type": "@db/gender",
+          "version": 1
+        },
+        {
+          "name": "birth",
+          "type": "@db/birth",
+          "version": 2
+        }
+      ]
+    }
+  ]
+}

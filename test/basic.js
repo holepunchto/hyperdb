@@ -548,3 +548,34 @@ test('enum as key type', async function ({ create, bee }, t) {
 
   await db.close()
 })
+
+test('array as key type', async function ({ create, bee }, t) {
+  const db = await create({ fixture: 8 })
+
+  await db.insert('@db/books', {
+    title: 'Brave New World',
+    tags: ['science fiction', 'dystopian', 'ficton']
+  })
+  await db.flush()
+
+  {
+    const book = await db.get('@db/books', {
+      title: 'Brave New World',
+      tags: ['science fiction', 'dystopian', 'ficton']
+    })
+    t.alike(book, { title: 'Brave New World', tags: ['science fiction', 'dystopian', 'ficton'] })
+  }
+  {
+    const distopianScifi = await db
+      .find('@db/books-by-tag', {
+        lte: { tags: ['science fiction', 'dystopian', 'ficton'] },
+        gte: { tags: ['science fiction', 'dystopian', 'ficton'] }
+      })
+      .toArray()
+    t.alike(distopianScifi, [
+      { title: 'Brave New World', tags: ['science fiction', 'dystopian', 'ficton'] }
+    ])
+  }
+
+  await db.close()
+})

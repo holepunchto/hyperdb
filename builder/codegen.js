@@ -437,8 +437,14 @@ function generateIndexKeyEncoding(type) {
     const component = type.keyEncoding[i]
 
     const keyType = type.builder.schema.types.get(`@${type.namespace}/${component}`)
+
+    if (keyType?.isArray) str += '  c.array('
+
     if (keyType?.isEnum) str += '  IndexEncoder.UINT'
+    else if (keyType?.isArray) str += IndexTypeMap.get(keyType.type.fqn)
     else str += '  ' + IndexTypeMap.get(component)
+
+    if (keyType?.isArray) str += ')'
 
     if (i !== type.keyEncoding.length - 1) str += ',\n'
     else str += '\n'

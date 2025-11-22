@@ -556,6 +556,10 @@ test('array as key type', async function ({ create, bee }, t) {
     title: 'Brave New World',
     tags: ['science fiction', 'dystopian', 'ficton']
   })
+  await db.insert('@db/books', {
+    title: 'Anathem',
+    tags: ['science fiction', 'philosophy', 'math', 'ficton']
+  })
   await db.flush()
 
   {
@@ -574,6 +578,18 @@ test('array as key type', async function ({ create, bee }, t) {
       .toArray()
     t.alike(distopianScifi, [
       { title: 'Brave New World', tags: ['science fiction', 'dystopian', 'ficton'] }
+    ])
+  }
+  {
+    const scifi = await db
+      .find('@db/books-by-tag', {
+        lte: { tags: ['science fiction', 'z', null, null] },
+        gte: { tags: ['science fiction'] }
+      })
+      .toArray()
+    t.alike(scifi, [
+      { title: 'Brave New World', tags: ['science fiction', 'dystopian', 'ficton'] },
+      { title: 'Anathem', tags: ['science fiction', 'philosophy', 'math', 'ficton'] }
     ])
   }
 

@@ -28,6 +28,10 @@ test.bee('define versionField on collection', async function ({ build }, t) {
 
   await dbVersions.flush()
   t.ok(len < dbVersions.core.length)
+
+  const all = await dbVersions.find('@example/members-by-name2').toArray()
+  t.is(all.length, 2)
+
   await dbVersions.close()
 })
 
@@ -117,6 +121,16 @@ function createExampleDBWithVersions(HyperDB, Hyperschema, paths) {
 
   exampleDB.indexes.register({
     name: 'members-by-name',
+    collection: '@example/members',
+    unique: true,
+    key: {
+      type: 'string',
+      map: 'mapNameToLowerCase'
+    }
+  })
+
+  exampleDB.indexes.register({
+    name: 'members-by-name2',
     collection: '@example/members',
     unique: true,
     key: {

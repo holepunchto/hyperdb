@@ -55,6 +55,65 @@ test('basic full example', async function ({ create }, t) {
   await db.close()
 })
 
+test('basic multi get', async function ({ create }, t) {
+  const db = await create(definition)
+
+  await db.insert('members', { id: 'maf', age: 34 })
+  await db.insert('members', { id: 'andrew', age: 34 })
+  await db.insert('members', { id: 'anna', age: 32 })
+  await db.flush()
+
+  {
+    const result = await db.find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }).toArray()
+    t.alike(result, [
+      { id: 'andrew', age: 34 },
+      { id: 'maf', age: 34 }
+    ])
+  }
+
+  // // stop lying
+  await db.insert('members', { id: 'maf', age: 37 })
+
+  {
+    const result = await db.find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }).toArray()
+    t.alike(result, [
+      { id: 'andrew', age: 34 },
+      { id: 'maf', age: 37 }
+    ])
+  }
+
+  {
+    const result = await db
+      .find('members/by-age', { gte: { age: 33 }, lt: { age: 99 } }, { reverse: true })
+      .toArray()
+    t.alike(result, [
+      { id: 'maf', age: 37 },
+      { id: 'andrew', age: 34 }
+    ])
+  }
+
+  {
+    const result = await db.find('members').toArray()
+    t.alike(result, [
+      { id: 'andrew', age: 34 },
+      { id: 'anna', age: 32 },
+      { id: 'maf', age: 37 }
+    ])
+  }
+
+  const [a, b, c] = await db.getAll([
+    ['members', { id: 'maf' }],
+    ['members', { id: 'anna' }],
+    ['members', { id: 'andrew' }]
+  ])
+
+  t.alike(a, { id: 'maf', age: 37 })
+  t.alike(b, { id: 'anna', age: 32 })
+  t.alike(c, { id: 'andrew', age: 34 })
+
+  await db.close()
+})
+
 test('delete record', async function ({ create }, t) {
   const db = await create(definition)
 

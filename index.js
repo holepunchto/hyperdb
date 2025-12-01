@@ -9,7 +9,8 @@ const BeeEngine = require('./lib/engine/bee.js')
 let compareHasDups = false
 
 class Updates {
-  constructor(tick, entries) {
+  constructor(parallelInserts, tick, entries) {
+    this.parallelInserts = parallelInserts
     this.refs = 1
     this.mutating = 0
     this.tick = tick // internal tie breaker clock for same key updates
@@ -25,6 +26,10 @@ class Updates {
     if (collection.trigger !== null) {
       if (this.locks.has(collection.id)) return false
       this.locks.set(collection.id, { resolve: null, promise: null })
+    }
+
+    if (this.mutating > 0 && !this.parallelInserts) {
+      throw new Error('Parallel inserts not allowed')
     }
 
     this.mutating++
@@ -76,7 +81,7 @@ class Updates {
     }
 
     this.refs--
-    return new Updates(this.tick, entries)
+    return new Updates(this.parallelInserts, this.tick, entries)
   }
 
   get(key) {
@@ -227,7 +232,8 @@ class HyperDB {
     {
       versions = definition.versions,
       snapshot = engine.snapshot(),
-      updates = new Updates(0, []),
+      parallelInserts = true,
+      updates = new Updates(parallelInserts, 0, []),
       rootInstance = null,
       writable = true,
       context = null
@@ -466,6 +472,14 @@ class HyperDB {
     const key = b4a.isBuffer(record) ? record : collection.encodeKey(record)
     const u = this.updates.get(key)
     return u !== null
+  }
+
+  getAll(batch) {
+    const promises = []
+    for (const [collectionName, record, opts] of batch) {
+      promises.push(this.get(collectionName, record, opts))
+    }
+    return Promise.all(promises)
   }
 
   async get(collectionName, record, { checkout = -1 } = {}) {

@@ -563,7 +563,7 @@ class HyperDB {
       const prevDoc = collection.reconstruct(this.versions.schema, key, prevValue)
       const prevVersion = collection.decodedVersion
 
-      const u = this.updates.update(tick, collection, key, null)
+      const u = this.updates.update(collection, tick, key, null)
 
       for (let i = 0; i < collection.indexes.length; i++) {
         const idx = collection.indexes[i]

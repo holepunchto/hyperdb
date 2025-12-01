@@ -639,6 +639,20 @@ class HyperDB {
     }
   }
 
+  async insertAll(batch) {
+    const promises = []
+
+    for (const [collection, record, opts] of batch) {
+      if (opts && opts.type === 'delete') {
+        promises.push(this.delete(collection, record))
+      } else {
+        promises.push(this.insert(collection, record))
+      }
+    }
+
+    await Promise.all(promises)
+  }
+
   update() {
     maybeClosed(this)
 

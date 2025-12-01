@@ -181,6 +181,11 @@ Alias for `await find(...).one()`
 
 Get a document from a collection that matches the `query`. The `query` object will be converted into a key to check against the `collection`.
 
+#### `[a, b, ...] = await db.getAll([[collection, query], ...])`
+
+Get multiple documents in parallel. For composeability if you pass a Promise as one of the entries,
+its echoed back.
+
 #### `await db.insert(collection, doc)`
 
 Insert a document into a collection. NOTE: you have to flush the db later for this to be persisted.
@@ -188,6 +193,11 @@ Insert a document into a collection. NOTE: you have to flush the db later for th
 #### `await db.delete(collection, query)`
 
 Delete a document from a collection matching the query. NOTE: you have to flush the db later for this to be persisted.
+
+#### `await db.insertAll([[collection, doc, opts?], ...])`
+
+Insert multiple documents in parallel. Options include `{ type: 'delete' }` which makes the batch
+interpret the insert as a delete for that item.
 
 #### `bool = db.updated([collection], [query])`
 

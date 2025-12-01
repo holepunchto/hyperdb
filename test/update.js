@@ -1,6 +1,6 @@
 const { test } = require('./helpers')
 
-test('update nested', async function ({ create, bee }, t) {
+test('update nested', async function ({ create }, t) {
   const db = await create({ fixture: 7 })
   const builder = require('./fixtures/generated/7/hyperschema')
   const { NotSpecified } = builder.getEnum('@db/gender')

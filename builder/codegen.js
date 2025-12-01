@@ -305,7 +305,7 @@ function generateEncodeCollectionValue(collection, sep) {
   str += `    const state = { start: 0, end: ${maxEnd}, buffer: null }\n`
 
   if (versionedUserland) {
-    str += `${gen('record', collection.versionField)} = collectionVersion\n`
+    str += `    ${gen('record', collection.versionField)} = collectionVersion\n`
   }
 
   str += `    ${id}_enc.preencode(state, record)\n`

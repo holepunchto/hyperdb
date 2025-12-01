@@ -21,6 +21,10 @@ class Updates {
     return this.map.size
   }
 
+  nextTick() {
+    return this.tick++
+  }
+
   enter(collection) {
     if (collection.trigger !== null) {
       if (this.locks.has(collection.id)) return false
@@ -116,10 +120,10 @@ class Updates {
     this.map.clear()
   }
 
-  update(collection, key, value) {
+  update(collection, tick, key, value) {
     const u = {
       created: false,
-      tick: this.tick++,
+      tick,
       collection,
       key,
       value,
@@ -538,6 +542,8 @@ class HyperDB {
     const collection = this.definition.resolveCollection(collectionName)
     if (collection === null) return
 
+    const tick = this.updates.nextTick()
+
     while (this.updates.enter(collection) === false) await this.updates.wait(collection)
 
     const snap = this.engineSnapshot.ref()
@@ -557,7 +563,7 @@ class HyperDB {
       const prevDoc = collection.reconstruct(this.versions.schema, key, prevValue)
       const prevVersion = collection.decodedVersion
 
-      const u = this.updates.update(collection, key, null)
+      const u = this.updates.update(tick, collection, key, null)
 
       for (let i = 0; i < collection.indexes.length; i++) {
         const idx = collection.indexes[i]
@@ -584,6 +590,7 @@ class HyperDB {
     const collection = this.definition.resolveCollection(collectionName)
     if (collection === null) throw new Error('Unknown collection: ' + collectionName)
 
+    const tick = this.updates.nextTick()
     while (this.updates.enter(collection) === false) await this.updates.wait(collection)
 
     const snap = this.engineSnapshot.ref()
@@ -607,7 +614,7 @@ class HyperDB {
         return
       }
 
-      const u = this.updates.update(collection, key, value)
+      const u = this.updates.update(collection, tick, key, value)
 
       u.created = prevValue === null
 

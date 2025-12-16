@@ -23,7 +23,7 @@ class Updates {
 
   nextTick() {
     const tick = this.tick
-    this.tick += 16 // 16 is how many trigger inserts can fire, deprecated anyway
+    this.tick += 256 // 256 is how many trigger inserts can fire, deprecated anyway
     return tick
   }
 
@@ -231,7 +231,7 @@ class TriggeredHyperDB {
     this.db = db
 
     this.tick = tick
-    this.maxTick = tick + 16
+    this.maxTick = tick + 256
   }
 
   _nextTick() {

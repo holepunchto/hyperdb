@@ -22,7 +22,9 @@ class Updates {
   }
 
   nextTick() {
-    return this.tick++
+    const tick = this.tick
+    this.tick += 16 // 16 is how many trigger inserts can fire, deprecated anyway
+    return tick
   }
 
   enter(collection) {
@@ -224,6 +226,47 @@ class Updates {
   }
 }
 
+class TriggeredHyperDB {
+  constructor(db, tick) {
+    this.db = db
+
+    this.tick = tick
+    this.maxTick = tick + 16
+  }
+
+  _nextTick() {
+    const tick = ++this.tick
+    if (tick >= this.maxTick) throw new Error('Too many inserts in the trigger')
+    return tick
+  }
+
+  getAll(...args) {
+    return this.db.getAll(...args)
+  }
+
+  get(...args) {
+    return this.db.get(...args)
+  }
+
+  find(...args) {
+    return this.db.find(...args)
+  }
+
+  findOne(...args) {
+    return this.db.findOne(...args)
+  }
+
+  async insert(collection, record) {
+    const tick = this._nextTick()
+    return this.db.insert(collection, record, { tick })
+  }
+
+  async delete(collection, record) {
+    const tick = this._nextTick()
+    return this.db.delete(collection, record, { tick })
+  }
+}
+
 class HyperDB {
   constructor(
     engine,
@@ -231,7 +274,7 @@ class HyperDB {
     {
       versions = definition.versions,
       snapshot = engine.snapshot(),
-      updates = new Updates(0, []),
+      updates = new Updates(1, []),
       rootInstance = null,
       writable = true,
       context = null
@@ -529,12 +572,13 @@ class HyperDB {
     return this.engine.finalize(collection, this.versions, checkout, this.traceable, key, value)
   }
 
-  // TODO: needs to wait for pending inserts/deletes and then lock all future ones whilst it runs
-  _runTrigger(collection, key, record) {
-    return collection.trigger(this, key, record, this.context)
+  async _runTrigger(tick, collection, key, record) {
+    const db = new TriggeredHyperDB(this, tick)
+    await collection.trigger(db, key, record, this.context)
+    return db.tick
   }
 
-  async delete(collectionName, record) {
+  async delete(collectionName, record, { tick = 0 } = {}) {
     maybeClosed(this)
 
     if (this.updates.refs > 1) this.updates = this.updates.detach()
@@ -542,7 +586,7 @@ class HyperDB {
     const collection = this.definition.resolveCollection(collectionName)
     if (collection === null) return
 
-    const tick = this.updates.nextTick()
+    if (tick === 0) tick = this.updates.nextTick()
 
     while (this.updates.enter(collection) === false) await this.updates.wait(collection)
 
@@ -553,7 +597,9 @@ class HyperDB {
 
     try {
       prevValue = await this.engineSnapshot.get(key, -1, this.activeRequests)
-      if (collection.trigger !== null) await this._runTrigger(collection, record, null)
+      if (collection.trigger !== null) {
+        tick = await this._runTrigger(tick, collection, record, null)
+      }
 
       if (prevValue === null) {
         this.updates.delete(key)
@@ -582,7 +628,7 @@ class HyperDB {
     }
   }
 
-  async insert(collectionName, record) {
+  async insert(collectionName, record, { tick = 0 } = {}) {
     maybeClosed(this)
 
     if (this.updates.refs > 1) this.updates = this.updates.detach()
@@ -590,7 +636,7 @@ class HyperDB {
     const collection = this.definition.resolveCollection(collectionName)
     if (collection === null) throw new Error('Unknown collection: ' + collectionName)
 
-    const tick = this.updates.nextTick()
+    if (tick === 0) tick = this.updates.nextTick()
     while (this.updates.enter(collection) === false) await this.updates.wait(collection)
 
     const snap = this.engineSnapshot.ref()
@@ -602,7 +648,9 @@ class HyperDB {
 
     try {
       prevValue = await this.engineSnapshot.get(key, -1, this.activeRequests)
-      if (collection.trigger !== null) await this._runTrigger(collection, record, record)
+      if (collection.trigger !== null) {
+        tick = await this._runTrigger(tick, collection, record, record)
+      }
 
       const prevDoc =
         prevValue === null ? null : collection.reconstruct(this.versions.schema, key, prevValue)

@@ -305,7 +305,7 @@ Create a namespaced db for defining multiple sets of database definitions on one
 
 #### `db.require(path)`
 
-Load helper functions to be used in the database as callbacks for collection triggers and index maps.
+Load helper functions to be used in the database as callbacks for index maps.
 
 ### Collections
 
@@ -320,8 +320,7 @@ A `description` has the following form:
   name: 'collection-name',
   schema: '@schema-ns/struct-name', // identifier for the collections schema
   key?: ['keyField1', 'keyField2'], // the definition of the primary key to lookup collection entries
-  derived?: false, // Whether it is derived collection and so shouldnt be versioned
-  trigger?: 'triggerFunctionName' // A function loaded via `db.require()` to run when a collection document is updated
+  derived?: false // Whether it is derived collection and so shouldnt be versioned
 }
 ```
 
@@ -349,60 +348,6 @@ db.collections.register({
   name: 'nested-foo',
   schema: '@db/nested',
   key: ['foo.id'] // uses `foo`'s `id` property as the key
-})
-```
-
-##### Collection Triggers
-
-`trigger` is a callback run when an entry is modified and can be used to update other entries in the database. The callback should be registered via `db.require(path)` and should have the following function signature:
-
-```js
-async function triggerCallback(db, query, record) {}
-```
-
-Trigger callback arguments:
-
-- `db` is the `hyperdb` instance.
-- `query` is the query being used to update the database. In the case of `db.insert()` the `query` is the document being inserted.
-- `record` is the document being inserted, if `null` the document matching `query` is being deleted.
-
-###### Trigger Example
-
-If you want to maintain metadata about a collection such as "how many active records does this collection have?" you can use a collection trigger and maintain the diff.
-
-```js
-// helpers.js
-exports.membersTrigger = async function (db, key, record) {
-  let [digest, previous] = await Promise.all([
-    db.get('@ns/members-digest'),
-    db.get('@ns/members', key)
-  ])
-
-  if (!digest) digest = { members: 0 }
-
-  const wasInserted = !!previous
-  const isInserted = !!record
-
-  if (!wasInserted && isInserted) digest.members += 1
-  if (wasInserted && !isInserted) digest.members -= 1
-
-  await db.insert('@ns/members-digest', digest)
-}
-
-// schema.js
-db.require('./helpers.js')
-
-db.collections.register({
-  name: 'members-digest',
-  key: [],
-  schema: ...
-})
-
-db.collections.register({
-  name: 'members',
-  trigger: 'membersTrigger',
-  key: [...],
-  schema: ...
 })
 ```
 

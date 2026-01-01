@@ -1,0 +1,37 @@
+{
+  "version": 1,
+  "offset": 0,
+  "schema": [
+    {
+      "name": "books",
+      "namespace": "db",
+      "id": 0,
+      "type": 1,
+      "version": 1,
+      "versionField": null,
+      "indexes": [
+        "@db/books-by-tag"
+      ],
+      "schema": "@db/book",
+      "derived": false,
+      "key": [
+        "title",
+        "tags"
+      ],
+      "trigger": null
+    },
+    {
+      "name": "books-by-tag",
+      "namespace": "db",
+      "id": 1,
+      "type": 2,
+      "version": 1,
+      "collection": "@db/books",
+      "unique": false,
+      "deprecated": false,
+      "key": [
+        "tags"
+      ]
+    }
+  ]
+}

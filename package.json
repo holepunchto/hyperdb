@@ -13,7 +13,7 @@
   "scripts": {
     "format": "prettier --write .",
     "lint": "prettier --check . && lunte",
-    "test": "npm run lint && brittle test/*.js",
+    "test": "brittle-node test/*.js",
     "generate": "rm -rf test/fixtures/generated && node test/fixtures/generate.js"
   },
   "exports": {

@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "schema": [
+    {
+      "name": "status",
+      "namespace": "db",
+      "offset": 1,
+      "enum": [
+        {
+          "key": "pending",
+          "version": 1
+        },
+        {
+          "key": "active",
+          "version": 1
+        },
+        {
+          "key": "completed",
+          "version": 1
+        }
+      ],
+      "strings": true
+    },
+    {
+      "name": "task",
+      "namespace": "db",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "project",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "status",
+          "required": true,
+          "type": "@db/status",
+          "version": 1
+        },
+        {
+          "name": "name",
+          "required": true,
+          "type": "string",
+          "version": 1
+        }
+      ]
+    }
+  ]
+}

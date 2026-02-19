@@ -607,3 +607,24 @@ test('enum as key type', async function ({ create, bee }, t) {
 
   await db.close()
 })
+
+test('enum with strings: true as key type', async function ({ create }, t) {
+  const db = await create({ fixture: 8 })
+
+  await db.insert('@db/tasks', { project: 'alpha', status: 'pending', name: 'task1' })
+  await db.insert('@db/tasks', { project: 'alpha', status: 'active', name: 'task2' })
+  await db.insert('@db/tasks', { project: 'beta', status: 'completed', name: 'task3' })
+  await db.flush()
+
+  {
+    const task = await db.get('@db/tasks', { project: 'alpha', status: 'pending', name: 'task1' })
+    t.alike(task, { project: 'alpha', status: 'pending', name: 'task1' })
+  }
+
+  {
+    const all = await db.find('@db/tasks').toArray()
+    t.is(all.length, 3)
+  }
+
+  await db.close()
+})

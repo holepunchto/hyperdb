@@ -3,36 +3,50 @@ const tmp = require('test-tmp')
 const path = require('path')
 const Hyperschema = require('hyperschema')
 const Hypercore = require('hypercore')
+const Corestore = require('corestore')
 const Builder = require('../../builder')
 const HyperDB = require('../../')
 
 const rocksTest = createTester('rocks')
 const beeTest = createTester('bee')
+const bee2Test = createTester('bee2')
 
 exports.test = test
 exports.replicate = replicate
 
 // solo just runs the rocks
-test.solo = rocksTest.solo
+test.solo = function (name, opts, fn) {
+  if (typeof opts === 'function') return test.solo(name, {}, opts)
+  if (opts.bee === true) return beeTest.solo(name, fn)
+  if (opts.bee2 === true) return bee2Test.solo(name, fn)
+  return rocksTest.solo(name, fn)
+}
 
-test.skip = function (name, fn) {
-  rocksTest.skip(name, fn)
-  beeTest.skip(name, fn)
+test.skip = function (...args) {
+  rocksTest.skip(...args)
+  beeTest.skip(...args)
+  bee2Test.skip(...args)
 }
 
 test.rocks = rocksTest
 test.bee = beeTest
+test.bee2 = bee2Test
 
-function test(name, fn) {
-  rocksTest(name, fn)
-  beeTest(name, fn)
+function test(name, opts, fn) {
+  if (typeof opts === 'function') return test(name, {}, opts)
+  if (!opts) opts = {}
+  if (opts.rocks !== false) rocksTest(name, fn)
+  if (opts.bee !== false) beeTest(name, fn)
+  if (opts.bee2 !== false) bee2Test(name, fn)
 }
 
 function createTester(type) {
   const make =
     type === 'rocks'
       ? (dir, def, opts = {}) => HyperDB.rocks(dir, def, opts)
-      : (dir, def, opts = {}) => HyperDB.bee(new Hypercore(dir, opts.key), def, opts)
+      : type === 'bee'
+        ? (dir, def, opts = {}) => HyperDB.bee(new Hypercore(dir, opts.key), def, opts)
+        : (dir, def, opts = {}) => HyperDB.bee2(new Corestore(dir), def, opts)
 
   const test = runner(brittle)
 

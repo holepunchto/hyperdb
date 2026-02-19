@@ -355,7 +355,7 @@ test('updates can be queryies', async function ({ create }, t) {
   await db.close()
 })
 
-test('changes', async function ({ create }, t) {
+test('changes', { bee2: false }, async function ({ create }, t) {
   const db = await create()
 
   if (!db.core) {
@@ -414,7 +414,7 @@ test('update does not break existing snaps', async function ({ create }, t) {
   await db.close()
 })
 
-test('nested keys', async function ({ create, bee }, t) {
+test('nested keys', { bee2: false }, async function ({ create, bee }, t) {
   const db = await create({ fixture: 4 })
 
   await db.insert('@db/nested-members', { member: { id: 'maf', age: 50 }, fun: true })

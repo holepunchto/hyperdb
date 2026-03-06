@@ -16,6 +16,15 @@ const IndexTypeMap = new Map([
   ['uint48', 'IndexEncoder.UINT'],
   ['uint56', 'IndexEncoder.UINT'],
   ['uint64', 'IndexEncoder.UINT'],
+  ['int', 'IndexEncoder.INT'],
+  ['int8', 'IndexEncoder.INT'],
+  ['int16', 'IndexEncoder.INT'],
+  ['int24', 'IndexEncoder.INT'],
+  ['int32', 'IndexEncoder.INT'],
+  ['int40', 'IndexEncoder.INT'],
+  ['int48', 'IndexEncoder.INT'],
+  ['int56', 'IndexEncoder.INT'],
+  ['int64', 'IndexEncoder.INT'],
   ['string', 'IndexEncoder.STRING'],
   ['utf8', 'IndexEncoder.STRING'],
   ['ascii', 'IndexEncoder.STRING'],
@@ -24,6 +33,7 @@ const IndexTypeMap = new Map([
   ['fixed32', 'IndexEncoder.BUFFER'],
   ['fixed64', 'IndexEncoder.BUFFER'],
   ['buffer', 'IndexEncoder.BUFFER'],
+  ['date', 'IndexEncoder.DATE'],
   ['bool', 'IndexEncoder.BOOL']
 ])
 

@@ -1,3 +1,4 @@
+const ScopeLock = require('scope-lock')
 const definition = require('./fixtures/definition')
 const { test } = require('./helpers')
 const tmp = require('test-tmp')
@@ -605,5 +606,65 @@ test('enum as key type', async function ({ create, bee }, t) {
     t.alike(females, [{ name: 'Jane', gender: Female }])
   }
 
+  await db.close()
+})
+
+test.solo('concurrency does not cause missed data', async function ({ create }, t) {
+  t.timeout(300_000)
+  const db = await create(definition)
+
+  const entries = 100_000
+  const batchSize = 10_000
+  const flushBatchInterval = 50
+  const iterations = 5
+
+  console.log('expected entries per iteration:', entries)
+  console.log('expected totl entries:', entries * iterations)
+  const lock = new ScopeLock({ debounce: true })
+  const interval = setInterval(async () => {
+    // Debounce the flush
+    if (!(await lock.lock())) return
+    try {
+      if (db.updates.size > 0) {
+        console.log(`flushing ${db.updates.size} updates`)
+        await db.flush()
+      }
+    } finally {
+      lock.unlock()
+    }
+  }, flushBatchInterval)
+
+  for (let i = 0; i < iterations; i++) {
+    let proms = []
+    console.log('Adding', entries, 'entries...')
+    for (let i = 1; i < entries + 1; i++) {
+      proms.push(db.insert('members', { id: `${Math.random()}`, age: 25 }))
+      if (i % batchSize === 0) {
+        await Promise.all(proms)
+        proms = []
+      }
+    }
+
+    await Promise.all(proms)
+    console.log('added', entries, 'entries...')
+
+    let nrEntries = 0
+    for await (const e of db.find('members')) nrEntries++
+    console.log('iteration', i, 'nr entries try 1', nrEntries)
+
+    nrEntries = 0
+    for await (const e of db.find('members')) nrEntries++
+    console.log('iteration', i, 'nr entries try 2', nrEntries, ' entries')
+  }
+
+  // some extra time to ensure it's all flushed
+  await new Promise((resolve) => setTimeout(resolve, 5000))
+
+  let nrEntries = 0
+  for await (const e of db.find('members')) nrEntries++
+  console.log('final entries:', nrEntries)
+  t.is(nrEntries, entries * iterations, 'Added all entries')
+
+  clearInterval(interval)
   await db.close()
 })

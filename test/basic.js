@@ -649,11 +649,11 @@ test.solo('concurrency does not cause missed data', async function ({ create }, 
     console.log('added', entries, 'entries...')
 
     let nrEntries = 0
-    for await (const e of db.find('members')) nrEntries++
+    for await (const _ of db.find('members')) nrEntries++
     console.log('iteration', i, 'nr entries try 1', nrEntries)
 
     nrEntries = 0
-    for await (const e of db.find('members')) nrEntries++
+    for await (const _ of db.find('members')) nrEntries++
     console.log('iteration', i, 'nr entries try 2', nrEntries, ' entries')
   }
 
@@ -661,7 +661,7 @@ test.solo('concurrency does not cause missed data', async function ({ create }, 
   await new Promise((resolve) => setTimeout(resolve, 5000))
 
   let nrEntries = 0
-  for await (const e of db.find('members')) nrEntries++
+  for await (const _ of db.find('members')) nrEntries++
   console.log('final entries:', nrEntries)
   t.is(nrEntries, entries * iterations, 'Added all entries')
 

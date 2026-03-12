@@ -610,65 +610,19 @@ test('enum as key type', async function ({ create, bee }, t) {
 })
 
 test.solo('concurrency does not cause missed data', async function ({ create }, t) {
-  t.timeout(300_000)
   const db = await create(definition)
 
-  const entries = 100_000
-  const batchSize = 10_000
-  const flushBatchInterval = 50
-  const iterations = 5
+  const tx = db.transaction()
+  await tx.insert('members', { id: '1', age: 25 })
 
-  console.log('expected entries per iteration:', entries)
-  console.log('expected totl entries:', entries * iterations)
-  let tx = db.transaction()
-  const lock = new ScopeLock({ debounce: true })
-  const interval = setInterval(async () => {
-  // Debounce the flush
-  if (!(await lock.lock())) return
-    try {
-      if (tx.updates.size > 0) {
-        const prom = tx.flush()
-        console.log(`flushing ${tx.updates.size} updates`)
-        tx = db.transaction()
-        await prom
-      }
-    } finally {
-      lock.unlock()
-    }
-  }, flushBatchInterval)
-
-  for (let i = 0; i < iterations; i++) {
-    let proms = []
-    console.log('Adding', entries, 'entries...')
-    for (let j = 1; j < entries + 1; j++) {
-      // await tx.insert('members', { id: `${i * 1_000_000 + j}`, age: 25 })
-      proms.push(tx.insert('members', { id: `${i * 1_000_000 + j }`, age: 25 }))
-      if (j % batchSize === 0) {
-        console.log(`Awaiting promise batch: ${proms.length}`)
-        await Promise.all(proms)
-      }
-    }
-
-    await Promise.all(proms)
-    console.log('added', entries, 'entries...')
-
-    let nrEntries = 0
-    for await (const _ of db.find('members')) nrEntries++
-    console.log('iteration', i, 'nr entries try 1', nrEntries)
-
-    nrEntries = 0
-    for await (const _ of db.find('members')) nrEntries++
-    console.log('iteration', i, 'nr entries try 2', nrEntries, ' entries')
-  }
-
-  // some extra time to ensure it's all flushed
-  await new Promise((resolve) => setTimeout(resolve, 5000))
+  const prom = tx.insert('members', { id: '2', age: 25 })
+  await Promise.all([tx.flush(), prom])
 
   let nrEntries = 0
   for await (const _ of db.find('members')) nrEntries++
   console.log('final entries:', nrEntries)
-  t.is(nrEntries, entries * iterations, 'Added all entries')
 
-  clearInterval(interval)
+  t.is(nrEntries, 2, 'unfinished insert is not lost')
+
   await db.close()
 })

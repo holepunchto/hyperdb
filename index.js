@@ -329,8 +329,6 @@ class HyperDB {
     const { autoUpdate = false, trace = null, key = null, length = -1 } = options
 
     const engine = new Bee2Engine(bee, { trace, key, length })
-    if (length > -1) engine.db.move({ key, length })
-
     const db = new HyperDB(engine, def.compat(definition), options)
 
     if (autoUpdate) {

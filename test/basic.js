@@ -620,14 +620,17 @@ test.solo('concurrency does not cause missed data', async function ({ create }, 
 
   console.log('expected entries per iteration:', entries)
   console.log('expected totl entries:', entries * iterations)
+  let tx = db.transaction()
   const lock = new ScopeLock({ debounce: true })
   const interval = setInterval(async () => {
-    // Debounce the flush
-    if (!(await lock.lock())) return
+  // Debounce the flush
+  if (!(await lock.lock())) return
     try {
-      if (db.updates.size > 0) {
-        console.log(`flushing ${db.updates.size} updates`)
-        await db.flush()
+      if (tx.updates.size > 0) {
+        const prom = tx.flush()
+        console.log(`flushing ${tx.updates.size} updates`)
+        tx = db.transaction()
+        await prom
       }
     } finally {
       lock.unlock()
@@ -638,12 +641,12 @@ test.solo('concurrency does not cause missed data', async function ({ create }, 
     let proms = []
     console.log('Adding', entries, 'entries...')
     for (let j = 1; j < entries + 1; j++) {
-      await db.insert('members', { id: `${i + j * 100_000}`, age: 25 })
-      // proms.push(db.insert('members', { id: `${i + j * 100_000}`, age: 25 }))
-      // if (i % batchSize === 0) {
-      //   await Promise.all(proms)
-      //   proms = []
-      // }
+      // await tx.insert('members', { id: `${i * 1_000_000 + j}`, age: 25 })
+      proms.push(tx.insert('members', { id: `${i * 1_000_000 + j }`, age: 25 }))
+      if (j % batchSize === 0) {
+        console.log(`Awaiting promise batch: ${proms.length}`)
+        await Promise.all(proms)
+      }
     }
 
     await Promise.all(proms)

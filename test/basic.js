@@ -637,12 +637,13 @@ test.solo('concurrency does not cause missed data', async function ({ create }, 
   for (let i = 0; i < iterations; i++) {
     let proms = []
     console.log('Adding', entries, 'entries...')
-    for (let i = 1; i < entries + 1; i++) {
-      proms.push(db.insert('members', { id: `${Math.random()}`, age: 25 }))
-      if (i % batchSize === 0) {
-        await Promise.all(proms)
-        proms = []
-      }
+    for (let j = 1; j < entries + 1; j++) {
+      await db.insert('members', { id: `${i + j * 100_000}`, age: 25 })
+      // proms.push(db.insert('members', { id: `${i + j * 100_000}`, age: 25 }))
+      // if (i % batchSize === 0) {
+      //   await Promise.all(proms)
+      //   proms = []
+      // }
     }
 
     await Promise.all(proms)

@@ -325,10 +325,10 @@ class HyperDB {
     return db
   }
 
-  static bee2(store, definition, options = {}) {
+  static bee2(bee, definition, options = {}) {
     const { autoUpdate = false, trace = null, key = null, length = -1 } = options
 
-    const engine = new Bee2Engine(store, { trace, key, length })
+    const engine = new Bee2Engine(bee, { trace, key, length })
     const db = new HyperDB(engine, def.compat(definition), options)
 
     if (autoUpdate) {

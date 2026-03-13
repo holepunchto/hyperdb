@@ -6,6 +6,7 @@ const Hypercore = require('hypercore')
 const Corestore = require('corestore')
 const Builder = require('../../builder')
 const HyperDB = require('../../')
+const Hyperbee2 = require('hyperbee2')
 
 const rocksTest = createTester('rocks')
 const beeTest = createTester('bee')
@@ -46,7 +47,10 @@ function createTester(type) {
       ? (dir, def, opts = {}) => HyperDB.rocks(dir, def, opts)
       : type === 'bee'
         ? (dir, def, opts = {}) => HyperDB.bee(new Hypercore(dir, opts.key), def, opts)
-        : (dir, def, opts = {}) => HyperDB.bee2(new Corestore(dir), def, opts)
+        : (dir, def, opts = {}) => {
+            const bee = new Hyperbee2(new Corestore(dir))
+            return HyperDB.bee2(bee, def, opts)
+          }
 
   const test = runner(brittle)
 

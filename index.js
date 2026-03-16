@@ -333,7 +333,7 @@ class HyperDB {
 
     if (autoUpdate) {
       const update = db.update.bind(db)
-      db.core.on('append', update)
+      bee.on('update', () => db.update())
       db.core.on('truncate', update)
     }
 

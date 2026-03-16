@@ -1,3 +1,4 @@
+const ScopeLock = require('scope-lock')
 const definition = require('./fixtures/definition')
 const { test } = require('./helpers')
 const tmp = require('test-tmp')
@@ -604,6 +605,24 @@ test('enum as key type', async function ({ create, bee }, t) {
       .toArray()
     t.alike(females, [{ name: 'Jane', gender: Female }])
   }
+
+  await db.close()
+})
+
+test.solo('concurrency does not cause missed data', async function ({ create }, t) {
+  const db = await create(definition)
+
+  const tx = db.transaction()
+  await tx.insert('members', { id: '1', age: 25 })
+
+  const prom = tx.insert('members', { id: '2', age: 25 })
+  await Promise.all([tx.flush(), prom])
+
+  let nrEntries = 0
+  for await (const _ of db.find('members')) nrEntries++
+  console.log('final entries:', nrEntries)
+
+  t.is(nrEntries, 2, 'unfinished insert is not lost')
 
   await db.close()
 })

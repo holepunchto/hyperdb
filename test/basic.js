@@ -374,12 +374,11 @@ test('changes - bee2', { bee2: true }, async function ({ create }, t) {
 
   {
     const head = db.engine.db.head()
-
     await db.insert('@db/members', { id: 'maf', age: 50 })
     await db.insert('@db/members', { id: 'andrew', age: 40 })
     await db.flush()
 
-    let ops = []
+    const ops = []
     for await (const op of db.changes({ from: head })) ops.push(op)
 
     t.alike(ops, [
@@ -388,13 +387,12 @@ test('changes - bee2', { bee2: true }, async function ({ create }, t) {
     ])
   }
 
-  const head = db.engine.db.head()
-
   {
+    const head = db.engine.db.head()
     await db.delete('@db/members', { id: 'andrew' })
     await db.flush()
 
-    ops = []
+    const ops = []
     t.comment('deleted')
     for await (const op of db.changes({ from: head })) ops.push(op)
 

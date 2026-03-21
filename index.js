@@ -332,9 +332,7 @@ class HyperDB {
     const db = new HyperDB(engine, def.compat(definition), options)
 
     if (autoUpdate) {
-      const update = db.update.bind(db)
-      db.core.on('append', update)
-      db.core.on('truncate', update)
+      bee.on('update', db.update.bind(db))
     }
 
     return db

@@ -1,3 +1,4 @@
+const Hyperbee = require('hyperbee2')
 const definition = require('./fixtures/definition')
 const { test } = require('./helpers')
 const tmp = require('test-tmp')
@@ -351,6 +352,56 @@ test('updates can be queryies', async function ({ create }, t) {
   await db.delete('@db/members', { id: 'maf' })
   t.is(db.updated(), false)
   t.is(db.updated('@db/members', { id: 'maf' }), false)
+
+  await db.close()
+})
+
+test('changes - bee2', { bee2: true }, async function ({ create }, t) {
+  const db = await create()
+
+  if (!db.core) {
+    t.comment('not supported on rocks')
+    await db.close()
+    return
+  }
+  await db.ready()
+
+  if (!(db.engine.db instanceof Hyperbee)) {
+    t.comment('only for bee2')
+    await db.close()
+    return
+  }
+
+  {
+    const head = db.engine.head()
+    await db.insert('@db/members', { id: 'maf', age: 50 })
+    await db.insert('@db/members', { id: 'andrew', age: 40 })
+    await db.flush()
+
+    const ops = []
+    for await (const op of db.changes({ from: head })) ops.push(op)
+
+    const latest = db.engine.head()
+    t.alike(ops, [
+      { type: 'insert', head: latest, collection: '@db/members', value: { id: 'andrew', age: 40 } },
+      { type: 'insert', head: latest, collection: '@db/members', value: { id: 'maf', age: 50 } }
+    ])
+  }
+
+  {
+    const head = db.engine.head()
+    await db.delete('@db/members', { id: 'andrew' })
+    await db.flush()
+
+    const ops = []
+    t.comment('deleted')
+    for await (const op of db.changes({ from: head })) ops.push(op)
+
+    const latest = db.engine.head()
+    t.alike(ops, [
+      { type: 'delete', head: latest, collection: '@db/members', value: { id: 'andrew' } }
+    ])
+  }
 
   await db.close()
 })

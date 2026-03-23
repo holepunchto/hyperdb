@@ -1,7 +1,13 @@
 import HyperDB from '../index.js'
 import def from '../test/fixtures/generated/1/hyperdb/index.js'
+import Corestore from 'corestore'
+import Hyperbee2 from 'hyperbee2'
 
-const db = HyperDB.rocks('./test.db', def)
+const bee2 = true
+
+const db = bee2
+  ? HyperDB.bee2(new Hyperbee2(new Corestore('bee2-store')), def)
+  : HyperDB.rocks('./test.db', def)
 
 console.time('boot')
 const oldest = await db.findOne('@db/members-by-age', { reverse: true })

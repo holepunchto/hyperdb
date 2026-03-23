@@ -373,7 +373,7 @@ test('changes - bee2', { bee2: true }, async function ({ create }, t) {
   }
 
   {
-    const head = db.engine.db.head()
+    const head = db.engine.head()
     await db.insert('@db/members', { id: 'maf', age: 50 })
     await db.insert('@db/members', { id: 'andrew', age: 40 })
     await db.flush()
@@ -381,14 +381,15 @@ test('changes - bee2', { bee2: true }, async function ({ create }, t) {
     const ops = []
     for await (const op of db.changes({ from: head })) ops.push(op)
 
+    const latest = db.engine.head()
     t.alike(ops, [
-      { type: 'insert', seq: 0, collection: '@db/members', value: { id: 'andrew', age: 40 } },
-      { type: 'insert', seq: 0, collection: '@db/members', value: { id: 'maf', age: 50 } }
+      { type: 'insert', head: latest, collection: '@db/members', value: { id: 'andrew', age: 40 } },
+      { type: 'insert', head: latest, collection: '@db/members', value: { id: 'maf', age: 50 } }
     ])
   }
 
   {
-    const head = db.engine.db.head()
+    const head = db.engine.head()
     await db.delete('@db/members', { id: 'andrew' })
     await db.flush()
 
@@ -396,7 +397,10 @@ test('changes - bee2', { bee2: true }, async function ({ create }, t) {
     t.comment('deleted')
     for await (const op of db.changes({ from: head })) ops.push(op)
 
-    t.alike(ops, [{ type: 'delete', seq: 0, collection: '@db/members', value: { id: 'andrew' } }])
+    const latest = db.engine.head()
+    t.alike(ops, [
+      { type: 'delete', head: latest, collection: '@db/members', value: { id: 'andrew' } }
+    ])
   }
 
   await db.close()

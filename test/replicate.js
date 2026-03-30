@@ -1,9 +1,14 @@
 const { test, replicate } = require('./helpers')
 
-test.bee('updates are explicit per default', async function ({ create }, t) {
-  t.plan(6)
-
+test('updates are explicit per default', async function ({ create }, t) {
   const db = await create()
+  if (!db.core) {
+    t.comment('not supported on rocks')
+    await db.close()
+    return
+  }
+
+  t.plan(6)
 
   await db.insert('@db/members', { id: 'someone', age: 40 })
   await db.flush()
@@ -48,10 +53,14 @@ test.bee('updates are explicit per default', async function ({ create }, t) {
   })
 })
 
-test.bee('can auto update', async function ({ create }, t) {
-  t.plan(4)
-
+test('can auto update', async function ({ create }, t) {
   const db = await create()
+  if (!db.core) {
+    t.comment('not supported on rocks')
+    await db.close()
+    return
+  }
+  t.plan(4)
 
   await db.insert('@db/members', { id: 'someone', age: 40 })
   await db.flush()
@@ -85,8 +94,13 @@ test.bee('can auto update', async function ({ create }, t) {
   })
 })
 
-test.bee('auto update but writable', async function ({ create }, t) {
+test('auto update but writable', async function ({ create }, t) {
   const db = await create({ autoUpdate: true })
+  if (!db.core) {
+    t.comment('not supported on rocks')
+    await db.close()
+    return
+  }
 
   await db.insert('@db/members', { id: 'someone', age: 40 })
   await db.flush()
@@ -106,8 +120,13 @@ test.bee('auto update but writable', async function ({ create }, t) {
   await db.close()
 })
 
-test.bee('requests are cleared on close', async function ({ create }, t) {
+test('requests are cleared on close', async function ({ create }, t) {
   const db = await create()
+  if (!db.core) {
+    t.comment('not supported on rocks')
+    await db.close()
+    return
+  }
 
   await db.insert('@db/members', { id: 'someone', age: 40 })
   await db.flush()
@@ -137,8 +156,13 @@ test.bee('requests are cleared on close', async function ({ create }, t) {
   })
 })
 
-test.bee('requests are cleared on close from unclosed snap', async function ({ create }, t) {
+test('requests are cleared on close from unclosed snap', async function ({ create }, t) {
   const db = await create()
+  if (!db.core) {
+    t.comment('not supported on rocks')
+    await db.close()
+    return
+  }
 
   await db.insert('@db/members', { id: 'someone', age: 40 })
   await db.flush()

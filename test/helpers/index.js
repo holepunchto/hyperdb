@@ -48,8 +48,11 @@ function createTester(type) {
       : type === 'bee'
         ? (dir, def, opts = {}) => HyperDB.bee(new Hypercore(dir, opts.key), def, opts)
         : (dir, def, opts = {}) => {
-            const bee = new Hyperbee2(new Corestore(dir))
-            return HyperDB.bee2(bee, def, opts)
+            return HyperDB.bee2(
+              new Hyperbee2(new Corestore(dir), { ...opts, autoUpdate: true }),
+              def,
+              opts
+            )
           }
 
   const test = runner(brittle)

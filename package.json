@@ -1,6 +1,6 @@
 {
   "name": "hyperdb",
-  "version": "6.4.0",
+  "version": "6.5.0",
   "description": "P2P Indexable Database",
   "files": [
     "index.js",

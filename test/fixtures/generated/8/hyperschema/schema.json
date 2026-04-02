@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "schema": [
+    {
+      "name": "tags",
+      "namespace": "db",
+      "array": true,
+      "type": "string"
+    },
+    {
+      "name": "book",
+      "namespace": "db",
+      "compact": false,
+      "flagsPosition": -1,
+      "fields": [
+        {
+          "name": "title",
+          "required": true,
+          "type": "string",
+          "version": 1
+        },
+        {
+          "name": "tags",
+          "required": true,
+          "type": "@db/tags",
+          "version": 1
+        }
+      ]
+    }
+  ]
+}

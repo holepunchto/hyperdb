@@ -752,7 +752,7 @@ class HyperDB {
 
     if (this.engineSnapshot.opened === false) await this.engineSnapshot.ready()
 
-    if (this.updating > 0) throw new Error('Insert/delete in progress, refusing to commit')
+    if (this.updates.mutating > 0) throw new Error('Insert/delete in progress, refusing to commit')
     if (this.rootInstance === null) throw new Error('Instance is not writable, refusing to commit')
     if (this.updates.size > 0) await this._flush()
     if (this.autoClose === true) await this.close()

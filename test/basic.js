@@ -658,3 +658,23 @@ test('enum as key type', async function ({ create, bee }, t) {
 
   await db.close()
 })
+
+test('flushing with pending insert/delete throws', async ({ create }, t) => {
+  const db = await create(definition)
+
+  {
+    // Intentionally dont wait to force a pending insertion when flushing
+    const p = db.insert('members', { id: 'maf', age: 34 })
+    await t.exception(db.flush(), /Insert\/delete in progress, refusing to commit/)
+    await p
+  }
+
+  {
+    // Intentionally dont wait to force a pending delete when flushing
+    const p = db.delete('members', { id: 'maf' })
+    await t.exception(db.flush(), /Insert\/delete in progress, refusing to commit/)
+    await p
+  }
+
+  await db.close()
+})

@@ -6,10 +6,29 @@ const { version, getEncoding, setVersion } = require('./messages.js')
 
 const versions = { schema: version, db: 1 }
 
+// '@db/gender' enum key encoding
+function enum_db_gender_encode (v) {
+  switch (v) {
+    case 'NotSpecified': return 1
+    case 'Male': return 2
+    case 'Female': return 3
+    default: throw new Error('Unknown enum')
+  }
+}
+
+function enum_db_gender_decode (v) {
+  switch (v) {
+    case 1: return 'NotSpecified'
+    case 2: return 'Male'
+    case 3: return 'Female'
+    default: return null
+  }
+}
+
 // '@db/members' collection key
 const collection0_key = new IndexEncoder([
   IndexEncoder.STRING,
-  IndexEncoder.STRING
+  IndexEncoder.UINT
 ], { prefix: 0 })
 
 function collection0_indexify (record) {
@@ -21,7 +40,7 @@ function collection0_indexify (record) {
 
   const a1 = record.gender
   if (a1 === undefined) return arr
-  arr.push(a1)
+  arr.push(enum_db_gender_encode(a1))
 
   return arr
 }
@@ -39,7 +58,7 @@ function collection0_reconstruct (schemaVersion, keyBuf, valueBuf) {
   collection0.decodedVersion = c.uint.decode(state)
   const record = collection0_enc.decode(state)
   record.name = key[0]
-  record.gender = key[1]
+  record.gender = enum_db_gender_decode(key[1])
   return record
 }
 // '@db/members' key reconstruction function
@@ -47,7 +66,7 @@ function collection0_reconstruct_key (keyBuf) {
   const key = collection0_key.decode(keyBuf)
   return {
     name: key[0],
-    gender: key[1]
+    gender: enum_db_gender_decode(key[1])
   }
 }
 
@@ -57,7 +76,7 @@ const collection0 = {
   id: 0,
   version: 1,
   encodeKey (record) {
-    const key = [record.name, record.gender]
+    const key = [record.name, enum_db_gender_encode(record.gender)]
     return collection0_key.encode(key)
   },
   encodeKeyRange ({ gt, lt, gte, lte } = {}) {
@@ -87,9 +106,9 @@ const collection0 = {
 
 // '@db/members-by-gender' collection key
 const index1_key = new IndexEncoder([
+  IndexEncoder.UINT,
   IndexEncoder.STRING,
-  IndexEncoder.STRING,
-  IndexEncoder.STRING
+  IndexEncoder.UINT
 ], { prefix: 1 })
 
 function index1_indexify (record) {
@@ -97,7 +116,7 @@ function index1_indexify (record) {
 
   const a0 = record.gender
   if (a0 === undefined) return arr
-  arr.push(a0)
+  arr.push(enum_db_gender_encode(a0))
 
   const a1 = record.name
   if (a1 === undefined) return arr
@@ -105,7 +124,7 @@ function index1_indexify (record) {
 
   const a2 = record.gender
   if (a2 === undefined) return arr
-  arr.push(a2)
+  arr.push(enum_db_gender_encode(a2))
 
   return arr
 }
@@ -128,7 +147,7 @@ const index1 = {
   },
   encodeValue: (record) => index1.collection.encodeKey(record),
   encodeIndexKeys (record, context) {
-    return [index1_key.encode([record.gender, record.name, record.gender])]
+    return [index1_key.encode([enum_db_gender_encode(record.gender), record.name, enum_db_gender_encode(record.gender)])]
   },
   reconstruct: (keyBuf, valueBuf) => valueBuf,
   offset: collection0.indexes.length,

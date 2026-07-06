@@ -485,7 +485,7 @@ function generateEnumKeyEncoding(enumType) {
   for (let i = 0; i < enumType.enum.length; i++) {
     str += `    case ${s(enumType.enum[i].key)}: return ${i + enumType.offset}\n`
   }
-  str += "    default: throw new Error('Unknown enum')\n"
+  str += '    default: return v\n'
   str += '  }\n'
   str += '}\n'
   str += '\n'

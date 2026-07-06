@@ -738,6 +738,13 @@ test('string enum as key type', async function ({ create, bee }, t) {
     t.alike(females, [{ name: 'Jane', gender: 'Female' }])
   }
 
+  {
+    const females = await db
+      .find('@db/members-by-gender', { lte: { gender: 3 }, gte: { gender: 3 } })
+      .toArray()
+    t.alike(females, [{ name: 'Jane', gender: Female }])
+  }
+
   await db.close()
 })
 

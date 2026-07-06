@@ -12,7 +12,7 @@ function enum_db_gender_encode (v) {
     case 'NotSpecified': return 1
     case 'Male': return 2
     case 'Female': return 3
-    default: throw new Error('Unknown enum')
+    default: return v
   }
 }
 

@@ -44,6 +44,8 @@ class DBType {
 
     let current = schema
     for (let i = 0; i < components.length; i++) {
+      // key fields of a versioned schema resolve through its latest version
+      if (current.isVersioned) current = current.versions[current.versions.length - 1].type
       const field = current.fieldsByName.get(components[i])
       if (!field) throw new Error('Could not resolve path: ' + path)
       current = field.type
@@ -115,6 +117,31 @@ class Collection extends DBType {
   ) {
     const fields = []
     const type = '/hyperdb#' + this.id
+
+    // derive a value variant per version so stored values keep their version dispatch and maps
+    if (schema.isVersioned && !parents.has(schema)) {
+      parents.add(schema)
+      let external = false
+      const versions = []
+      for (const v of schema.versions) {
+        const derived = this._deriveValueSchema(
+          v.type,
+          prefix,
+          primaryKeySet,
+          new Set([...parents])
+        )
+        if (derived.external) external = true
+        versions.push({ version: v.version, type: derived.fqn, map: v.map })
+      }
+      if (!external) return { external: false, fqn: getFQN(schema.namespace, schema.name) }
+      this.builder.schema.register({
+        derived: true,
+        namespace: schema.namespace,
+        name: schema.name + type,
+        versions
+      })
+      return { external: true, fqn: getFQN(schema.namespace, schema.name + type) }
+    }
 
     if (!schema.isStruct || parents.has(schema)) return { external: false, fqn: schema.name }
 
@@ -420,7 +447,9 @@ class Builder {
     const dbJsonPath = p.join(p.resolve(dbDir), DB_JSON_FILE_NAME)
     const codePath = p.join(p.resolve(dbDir), CODE_FILE_NAME)
 
-    fs.writeFileSync(messagesPath, hyperdb.schema.toCode({ esm }), { encoding: 'utf-8' })
+    fs.writeFileSync(messagesPath, hyperdb.schema.toCode({ esm, filename: messagesPath }), {
+      encoding: 'utf-8'
+    })
     fs.writeFileSync(dbJsonPath, JSON.stringify(hyperdb.toJSON(), null, 2), { encoding: 'utf-8' })
     fs.writeFileSync(codePath, generateCode(hyperdb, { directory: dbDir, esm }), {
       encoding: 'utf-8'
@@ -456,10 +485,14 @@ function getFQN(namespace, name) {
 function resolvePathToType(name, schema) {
   const parts = name.split('.')
 
-  let field = schema.fieldsByName.get(parts[0])
-
-  for (let i = 1; i < parts.length && field; i++) {
-    field = field.type.fieldsByName.get(parts[i])
+  let field = null
+  let current = schema
+  for (let i = 0; i < parts.length; i++) {
+    // key fields of a versioned schema resolve through its latest version
+    if (current.isVersioned) current = current.versions[current.versions.length - 1].type
+    field = current.fieldsByName.get(parts[i])
+    if (!field) return null
+    current = field.type
   }
 
   return field

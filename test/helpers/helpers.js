@@ -25,3 +25,8 @@ exports.mapMiddleAge = (record, context) => {
   if (record.age > 40 && record.age < 60) return [record.age]
   return []
 }
+
+exports.thingV1ToV2 = (record) => {
+  const { title, ...rest } = record
+  return { ...rest, version: 2, name: title }
+}

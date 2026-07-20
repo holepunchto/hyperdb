@@ -35,6 +35,36 @@ test.bee('define versionField on collection', async function ({ build }, t) {
   await dbVersions.close()
 })
 
+test.bee('versioned collection schema maps old rows on read', async function ({ build }, t) {
+  const dir = await tmp(t, { dir: path.join(__dirname, 'fixtures/tmp') })
+
+  const db = await build(createVersionedDB, { dir })
+  await db.insert('@example/things', { version: 1, id: 'a', title: 'hello' })
+  await db.flush()
+  await db.close()
+
+  // build() re-requires the generated index.js but not messages.js - refresh it by hand
+  delete require.cache[require.resolve(path.join(dir, 'hyperdb/messages.js'))]
+
+  const db2 = await build(createVersionedDBWithV2, { dir })
+  const row = await db2.get('@example/things', { id: 'a' })
+  await db2.close()
+
+  t.alike(row, { version: 2, id: 'a', name: 'hello' })
+})
+
+test.bee('key path through a nested versioned field resolves', async function ({ build }, t) {
+  const dir = await tmp(t, { dir: path.join(__dirname, 'fixtures/tmp') })
+
+  const db = await build(createNestedVersionedDB, { dir })
+  await db.insert('@example/wrappers', { thing: { version: 1, id: 'a', title: 'hello' } })
+  await db.flush()
+  const row = await db.get('@example/wrappers', { thing: { id: 'a' } })
+  await db.close()
+
+  t.alike(row, { thing: { version: 1, id: 'a', title: 'hello' } })
+})
+
 function createExampleDB(HyperDB, Hyperschema, paths) {
   const schema = Hyperschema.from(paths.schema)
   const example = schema.namespace('example')
@@ -137,6 +167,148 @@ function createExampleDBWithVersions(HyperDB, Hyperschema, paths) {
       type: 'string',
       map: 'mapNameToLowerCase'
     }
+  })
+
+  HyperDB.toDisk(db)
+}
+
+function registerThingV1(example) {
+  example.register({
+    name: 'thing-v1',
+    fields: [
+      {
+        name: 'id',
+        type: 'string',
+        required: true
+      },
+      {
+        name: 'title',
+        type: 'string',
+        required: true
+      }
+    ]
+  })
+}
+
+function createVersionedDB(HyperDB, Hyperschema, paths) {
+  const schema = Hyperschema.from(paths.schema)
+  const example = schema.namespace('example')
+
+  registerThingV1(example)
+
+  example.register({
+    name: 'thing',
+    versions: [
+      {
+        version: 1,
+        type: '@example/thing-v1'
+      }
+    ]
+  })
+
+  Hyperschema.toDisk(schema)
+
+  const db = HyperDB.from(paths.schema, paths.db)
+  const exampleDB = db.namespace('example')
+
+  exampleDB.collections.register({
+    name: 'things',
+    schema: '@example/thing',
+    key: ['id']
+  })
+
+  HyperDB.toDisk(db)
+}
+
+function createVersionedDBWithV2(HyperDB, Hyperschema, paths) {
+  const schema = Hyperschema.from(paths.schema)
+  const example = schema.namespace('example')
+
+  example.require(paths.helpers)
+
+  registerThingV1(example)
+
+  example.register({
+    name: 'thing-v2',
+    fields: [
+      {
+        name: 'id',
+        type: 'string',
+        required: true
+      },
+      {
+        name: 'name',
+        type: 'string',
+        required: true
+      }
+    ]
+  })
+
+  example.register({
+    name: 'thing',
+    versions: [
+      {
+        version: 1,
+        type: '@example/thing-v1',
+        map: 'thingV1ToV2'
+      },
+      {
+        version: 2,
+        type: '@example/thing-v2'
+      }
+    ]
+  })
+
+  Hyperschema.toDisk(schema)
+
+  const db = HyperDB.from(paths.schema, paths.db)
+  const exampleDB = db.namespace('example')
+
+  exampleDB.collections.register({
+    name: 'things',
+    schema: '@example/thing',
+    key: ['id']
+  })
+
+  HyperDB.toDisk(db)
+}
+
+function createNestedVersionedDB(HyperDB, Hyperschema, paths) {
+  const schema = Hyperschema.from(paths.schema)
+  const example = schema.namespace('example')
+
+  registerThingV1(example)
+
+  example.register({
+    name: 'thing',
+    versions: [
+      {
+        version: 1,
+        type: '@example/thing-v1'
+      }
+    ]
+  })
+
+  example.register({
+    name: 'wrapper',
+    fields: [
+      {
+        name: 'thing',
+        type: '@example/thing',
+        required: true
+      }
+    ]
+  })
+
+  Hyperschema.toDisk(schema)
+
+  const db = HyperDB.from(paths.schema, paths.db)
+  const exampleDB = db.namespace('example')
+
+  exampleDB.collections.register({
+    name: 'wrappers',
+    schema: '@example/wrapper',
+    key: ['thing.id']
   })
 
   HyperDB.toDisk(db)

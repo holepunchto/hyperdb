@@ -513,6 +513,52 @@ test('nested keys', { bee2: false }, async function ({ create, bee }, t) {
   await db.close()
 })
 
+test('collection - register - missing nested keys', async function ({ build }, t) {
+  t.plan(1)
+  const db = await build(createDB)
+  await db.close()
+
+  function createDB(HyperDB, Hyperschema, paths) {
+    const schema = Hyperschema.from(paths.schema)
+    const example = schema.namespace('db')
+
+    example.register({
+      name: 'bar',
+      fields: [
+        {
+          name: 'baz',
+          type: 'string',
+          required: true
+        }
+      ]
+    })
+
+    example.register({
+      name: 'foo',
+      fields: [
+        {
+          name: 'bar',
+          type: '@db/bar',
+          required: true
+        }
+      ]
+    })
+
+    Hyperschema.toDisk(schema)
+
+    const db = HyperDB.from(paths.schema, paths.db)
+    const exampleDB = db.namespace('db')
+
+    t.exception(() => exampleDB.collections.register({
+      name: 'nonexistents',
+      schema: '@db/foo',
+      key: ['bar.nonexistent']
+    }), /Field not found: bar\.nonexistent/, 'Throws when given bad key')
+
+    HyperDB.toDisk(db)
+  }
+})
+
 test('undo mutation without deletion', async function ({ create }, t) {
   const db = await create()
 

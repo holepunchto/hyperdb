@@ -549,11 +549,16 @@ test('collection - register - missing nested keys', async function ({ build }, t
     const db = HyperDB.from(paths.schema, paths.db)
     const exampleDB = db.namespace('db')
 
-    t.exception(() => exampleDB.collections.register({
-      name: 'nonexistents',
-      schema: '@db/foo',
-      key: ['bar.nonexistent']
-    }), /Field not found: bar\.nonexistent/, 'Throws when given bad key')
+    t.exception(
+      () =>
+        exampleDB.collections.register({
+          name: 'nonexistents',
+          schema: '@db/foo',
+          key: ['bar.nonexistent']
+        }),
+      /Field not found: bar\.nonexistent/,
+      'Throws when given bad key'
+    )
 
     HyperDB.toDisk(db)
   }

@@ -88,11 +88,11 @@ module.exports = function generateCode(hyperdb, { directory = '.', esm = false }
   for (const type of hyperdb.orderedTypes) {
     if (!type.isCollection && !type.isIndex) continue
     for (let i = 0; i < type.keyEncoding.length; i++) {
-      const e = getKeyEnum(type, i)
-      if (e) keyEnums.set(e.fqn, e)
+      const id = enumId(type, i)
+      if (id) keyEnums.set(id, keyEnum(type, i))
     }
   }
-  for (const e of keyEnums.values()) str += generateEnumKeyEncoding(e)
+  for (const [id, e] of keyEnums) str += generateEnumKeyEncoding(e, id)
 
   const collections = []
   const indexes = []
@@ -456,28 +456,27 @@ function generateKeyReconstruct(indent, type, key) {
   }
 }
 
-function getKeyEnum(type, i) {
+function keyEnum(type, i) {
   const keyType = type.builder.schema.types.get(`@${type.namespace}/${type.keyEncoding[i]}`)
-  return keyType && keyType.isEnum && keyType.strings ? keyType : null
+  return keyType?.isEnum ? keyType : null
 }
 
-function getEnumId(enumType) {
-  return 'enum_' + enumType.fqn.slice(1).replace(/[^a-zA-Z0-9]/g, '_')
+function enumId(type, i) {
+  const e = keyEnum(type, i)
+  return e?.strings ? 'enum' + type.builder.schema.positionsByType.get(e.fqn) : null
 }
 
 function wrapKeyEncode(type, i, expr) {
-  const e = getKeyEnum(type, i)
-  return e ? `${getEnumId(e)}_encode(${expr})` : expr
+  const id = enumId(type, i)
+  return id ? `${id}_encode(${expr})` : expr
 }
 
 function wrapKeyDecode(type, i, expr) {
-  const e = getKeyEnum(type, i)
-  return e ? `${getEnumId(e)}_decode(${expr})` : expr
+  const id = enumId(type, i)
+  return id ? `${id}_decode(${expr})` : expr
 }
 
-function generateEnumKeyEncoding(enumType) {
-  const id = getEnumId(enumType)
-
+function generateEnumKeyEncoding(enumType, id) {
   let str = ''
   str += `// ${s(enumType.fqn)} enum key encoding\n`
   str += `function ${id}_encode (v) {\n`
@@ -504,11 +503,8 @@ function generateEnumKeyEncoding(enumType) {
 function generateIndexKeyEncoding(type) {
   let str = 'new IndexEncoder([\n'
   for (let i = 0; i < type.keyEncoding.length; i++) {
-    const component = type.keyEncoding[i]
-
-    const keyType = type.builder.schema.types.get(`@${type.namespace}/${component}`)
-    if (keyType?.isEnum) str += '  IndexEncoder.UINT'
-    else str += '  ' + IndexTypeMap.get(component)
+    if (keyEnum(type, i)) str += '  IndexEncoder.UINT'
+    else str += '  ' + IndexTypeMap.get(type.keyEncoding[i])
 
     if (i !== type.keyEncoding.length - 1) str += ',\n'
     else str += '\n'

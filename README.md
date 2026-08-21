@@ -221,6 +221,45 @@ following properties:
 
 Only supported with Hyperbee engine.
 
+#### `const stream = db.diff(collection, query = {})`
+
+Returns a stream of `{ left, right }` objects describing how a collection
+changed between an earlier point in the database's history and the database as
+it is now. `left` is the document as it was then, `right` is the document as it
+is now, and either side is `null` when the document did not exist there:
+
+```
+{ left: null, right: doc } // inserted
+{ left: doc, right: null } // deleted
+{ left: doc, right: doc } // updated
+```
+
+The `query` looks like this
+
+```js
+{
+  from, // head to diff against, defaults to the empty database
+  gt: { ... },
+  gte: { ... },
+  lt: { ... },
+  lte: { ... },
+  limit // how many max?
+}
+```
+
+`from` is a head, ie. `{ key, length }`, as returned by `db.engine.head()`, the
+same value `db.changes({ from })` takes. It defaults to the empty database, so
+`db.diff(collection)` streams every document as an insert.
+
+The range is bounded to the given collection, and documents are streamed in key
+order, so `reverse` is not supported. Diffing an index is not supported either,
+since an index only sees changes that move its own keys.
+
+Only committed state is compared, inserts and deletes that have not been flushed
+yet are not included.
+
+Only supported with the Hyperbee2 engine.
+
 #### `await db.flush()`
 
 Flush all changes to the db

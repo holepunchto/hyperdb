@@ -401,6 +401,26 @@ class HyperDB {
     return this.engine.changes(snap, this.versions, this.definition, range)
   }
 
+  diff(collectionName, query = {}) {
+    maybeClosed(this)
+
+    const collection = this.definition.resolveCollection(collectionName)
+
+    if (collection === null) {
+      if (this.definition.resolveIndex(collectionName) !== null) {
+        throw new Error('Cannot diff an index, pass a collection: ' + collectionName)
+      }
+      throw new Error('Unknown collection: ' + collectionName)
+    }
+
+    if (query.reverse === true) throw new Error('Reverse diffs are not supported')
+
+    const { from = { key: null, length: 0 }, limit = -1 } = query
+    const range = collection.encodeKeyRange(query)
+
+    return this.engine.diff(this.engineSnapshot, this.versions, collection, from, range, limit)
+  }
+
   watch(fn) {
     if (this.watchers === null) this.watchers = new Set()
     this.watchers.add(fn)

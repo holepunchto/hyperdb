@@ -84,6 +84,16 @@ module.exports = function generateCode(hyperdb, { directory = '.', esm = false }
   }
   if (addedHelper) str += '\n'
 
+  const keyEnums = new Map()
+  for (const type of hyperdb.orderedTypes) {
+    if (!type.isCollection && !type.isIndex) continue
+    for (let i = 0; i < type.keyEncoding.length; i++) {
+      const id = enumId(type, i)
+      if (id) keyEnums.set(id, keyEnum(type, i))
+    }
+  }
+  for (const [id, e] of keyEnums) str += generateEnumKeyEncoding(e, id)
+
   const collections = []
   const indexes = []
 
@@ -169,7 +179,7 @@ function generateCommonPrefix(type) {
     str += '  return []\n'
   } else if (len === 1) {
     str += `  const a = ${getKeyPath(type.fullKey[0], 'record', true)}\n`
-    str += '  return a === undefined ? [] : [a]\n'
+    str += `  return a === undefined ? [] : [${wrapKeyEncode(type, 0, 'a')}]\n`
   } else {
     str += '  const arr = []\n'
     str += '\n'
@@ -178,7 +188,7 @@ function generateCommonPrefix(type) {
       const key = type.fullKey[i]
       str += `  const a${i} = ${getKeyPath(key, 'record', true)}\n`
       str += `  if (a${i} === undefined) return arr\n`
-      str += `  arr.push(a${i})\n`
+      str += `  arr.push(${wrapKeyEncode(type, i, 'a' + i)})\n`
       str += '\n'
     }
     str += '  return arr\n'
@@ -224,7 +234,7 @@ function generateCollectionDefinition(collection) {
 
   for (let i = 0; i < collection.key.length; i++) {
     const key = collection.key[i]
-    str += `  ${getKeyPath(key, 'record', false)} = key[${i}]\n`
+    str += `  ${getKeyPath(key, 'record', false)} = ${wrapKeyDecode(collection, i, `key[${i}]`)}\n`
   }
 
   if (versionedUserland) {
@@ -238,7 +248,7 @@ function generateCollectionDefinition(collection) {
   str += `function ${id}_reconstruct_key (keyBuf) {\n`
   if (collection.key.length) str += `  const key = ${id}_key.decode(keyBuf)\n`
 
-  str += generateKeyReconstruct('  ', collection.key, 'key') + '\n'
+  str += generateKeyReconstruct('  ', collection, 'key') + '\n'
   str += '}\n'
 
   str += '\n'
@@ -348,7 +358,9 @@ function generateEncodeCollectionValue(collection, sep) {
 function generateEncodeCollectionKey(collection, sep) {
   const id = getId(collection)
 
-  const accessors = toProps('record', collection.fullKey)
+  const accessors = toProps('record', collection.fullKey).map((a, i) =>
+    wrapKeyEncode(collection, i, a)
+  )
   let str = ''
   str += '  encodeKey (record) {\n'
   str += `    const key = [${accessors.join(', ')}]\n`
@@ -365,7 +377,9 @@ function generateEncodeIndexKeys(index, sep) {
   if (index.isMapped) {
     const indexAccessors = toProps('mappedRecord', index.indexKey)
     const recordAccessors = toProps('record', index.fullKey.slice(index.indexKey.length))
-    const accessors = indexAccessors.concat(recordAccessors)
+    const accessors = indexAccessors
+      .concat(recordAccessors)
+      .map((a, i) => wrapKeyEncode(index, i, a))
     str += `    const mapped = ${id}_map(record, context)\n`
     str += '    const keys = new Array(mapped.length)\n'
     str += '    for (let i = 0; i < mapped.length; i++) {\n'
@@ -374,7 +388,7 @@ function generateEncodeIndexKeys(index, sep) {
     str += '    }\n'
     str += '    return keys\n'
   } else {
-    const accessors = toProps('record', index.fullKey)
+    const accessors = toProps('record', index.fullKey).map((a, i) => wrapKeyEncode(index, i, a))
     str += `    return [${id + '_key'}.encode([${accessors.join(', ')}])]\n`
   }
   str += `  }${sep}\n`
@@ -395,7 +409,8 @@ function toProps(name, keys) {
   return keys.map((c) => (c === null ? name : c.split('.').reduce(gen, name)))
 }
 
-function generateKeyReconstruct(indent, keys, key) {
+function generateKeyReconstruct(indent, type, key) {
+  const keys = type.key
   if (keys.length === 0) return indent + 'return {}'
 
   const grouped = new Map()
@@ -430,7 +445,7 @@ function generateKeyReconstruct(indent, keys, key) {
       const [k, v] = all[i]
       s += indent + `  ${gen.property(k)}: `
       if (v.index !== -1) {
-        s += `${key}[${v.index}]`
+        s += wrapKeyDecode(type, v.index, `${key}[${v.index}]`)
       } else {
         s += generate(indent + '  ', v.map)
       }
@@ -441,14 +456,55 @@ function generateKeyReconstruct(indent, keys, key) {
   }
 }
 
+function keyEnum(type, i) {
+  const keyType = type.builder.schema.types.get(`@${type.namespace}/${type.keyEncoding[i]}`)
+  return keyType?.isEnum ? keyType : null
+}
+
+function enumId(type, i) {
+  const e = keyEnum(type, i)
+  return e?.strings ? 'enum' + type.builder.schema.positionsByType.get(e.fqn) : null
+}
+
+function wrapKeyEncode(type, i, expr) {
+  const id = enumId(type, i)
+  return id ? `${id}_encode(${expr})` : expr
+}
+
+function wrapKeyDecode(type, i, expr) {
+  const id = enumId(type, i)
+  return id ? `${id}_decode(${expr})` : expr
+}
+
+function generateEnumKeyEncoding(enumType, id) {
+  let str = ''
+  str += `// ${s(enumType.fqn)} enum key encoding\n`
+  str += `function ${id}_encode (v) {\n`
+  str += '  switch (v) {\n'
+  for (let i = 0; i < enumType.enum.length; i++) {
+    str += `    case ${s(enumType.enum[i].key)}: return ${i + enumType.offset}\n`
+  }
+  str += '    default: return v\n'
+  str += '  }\n'
+  str += '}\n'
+  str += '\n'
+  str += `function ${id}_decode (v) {\n`
+  str += '  switch (v) {\n'
+  for (let i = 0; i < enumType.enum.length; i++) {
+    str += `    case ${i + enumType.offset}: return ${s(enumType.enum[i].key)}\n`
+  }
+  str += '    default: return null\n'
+  str += '  }\n'
+  str += '}\n'
+  str += '\n'
+  return str
+}
+
 function generateIndexKeyEncoding(type) {
   let str = 'new IndexEncoder([\n'
   for (let i = 0; i < type.keyEncoding.length; i++) {
-    const component = type.keyEncoding[i]
-
-    const keyType = type.builder.schema.types.get(`@${type.namespace}/${component}`)
-    if (keyType?.isEnum) str += '  IndexEncoder.UINT'
-    else str += '  ' + IndexTypeMap.get(component)
+    if (keyEnum(type, i)) str += '  IndexEncoder.UINT'
+    else str += '  ' + IndexTypeMap.get(type.keyEncoding[i])
 
     if (i !== type.keyEncoding.length - 1) str += ',\n'
     else str += '\n'

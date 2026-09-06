@@ -1,7 +1,13 @@
 import HyperDB from '../index.js'
 import def from '../test/fixtures/generated/1/hyperdb/index.js'
+import Corestore from 'corestore'
+import Hyperbee2 from 'hyperbee2'
 
-const db = HyperDB.rocks('./test.db', def)
+const bee2 = true
+
+const db = bee2
+  ? HyperDB.bee2(new Hyperbee2(new Corestore('bee2-store')), def)
+  : HyperDB.rocks('./test.db', def)
 
 console.time('boot')
 const oldest = await db.findOne('@db/members-by-age', { reverse: true })
@@ -9,7 +15,7 @@ console.timeEnd('boot')
 
 let i = oldest ? oldest.age + 1 : 0
 
-while (i < 10_000_000) {
+while (i < 300_000) {
   console.time('inserting')
   const all = []
   for (let j = 0; j < 25_000; j++) {
@@ -23,6 +29,8 @@ while (i < 10_000_000) {
   console.timeEnd('flushing')
   console.log('total:', i)
 }
+
+console.log('queries...')
 
 await timeQuery('10k members-by-age', '@db/members-by-age', { gt: { age: 90_000 }, limit: 10_000 })
 await timeQuery('10 members-by-age', '@db/members-by-age', { limit: 10 })

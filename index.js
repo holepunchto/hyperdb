@@ -473,6 +473,24 @@ class HyperDB {
     return this._createSnapshot(this, false, context)
   }
 
+  session(options) {
+    maybeClosed(this)
+
+    const context = (options && options.context) || this.context
+    const checkout = options ? { ...this.engine.head(), ...options } : this.engine.head()
+
+    const snapshot = this.engine.checkout(checkout)
+    if (snapshot === null) throw new Error('Invalid snapshot')
+
+    return new HyperDB(this.engine, this.definition, {
+      versions: this.versions,
+      snapshot,
+      rootInstance: this.rootInstance,
+      writable: this.writable,
+      context
+    })
+  }
+
   // in future major, lets move transaction to be exclusive (aka sync) always
   async exclusiveTransaction(options) {
     await this.engine.enter()

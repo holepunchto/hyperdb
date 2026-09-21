@@ -136,6 +136,7 @@ class Collection extends DBType {
       if (!external) return { external: false, fqn: getFQN(schema.namespace, schema.name) }
       this.builder.schema.register({
         derived: true,
+        framed: schema.framed,
         namespace: schema.namespace,
         name: schema.name + type,
         versions

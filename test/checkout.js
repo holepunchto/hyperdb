@@ -99,3 +99,15 @@ test.bee2('checkout session timeout', async function ({ create }, t) {
   await session.close()
   await db.close()
 })
+
+test.bee2('transaction timeout', async function ({ create }, t) {
+  const db = await create()
+  await db.ready()
+
+  const tx = db.transaction({ timeout: 100, length: db.core.length + 1 })
+
+  await t.exception(tx.get('@db/members', { id: 'a' }), /REQUEST_TIMEOUT/)
+
+  await tx.close()
+  await db.close()
+})

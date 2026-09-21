@@ -512,10 +512,23 @@ class HyperDB {
     }
 
     const context = (options && options.context) || this.context
+
+    if (options) {
+      const snapshot = this.engine.checkout({ ...this.engine.head(), ...options })
+      if (snapshot === null) throw new Error('Invalid snapshot')
+
+      return new HyperDB(this.engine, this.definition, {
+        versions: this.versions,
+        snapshot,
+        updates: this.updates.ref(),
+        rootInstance: this,
+        writable: true,
+        context
+      })
+    }
+
     const tx = this._createSnapshot(this, true, context)
-
     tx.update()
-
     return tx
   }
 

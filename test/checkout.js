@@ -91,7 +91,7 @@ test.bee2('transaction timeout', async function ({ create }, t) {
   const db = await create()
   await db.ready()
 
-  // Select an unavailable head; snapshot() itself does not accept a length.
+  // unavailable block will trigger timeout
   db.db.move({ length: db.core.length + 1 })
   const tx = db.transaction({ timeout: 100 })
 

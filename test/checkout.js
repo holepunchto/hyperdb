@@ -60,43 +60,30 @@ test.bee2('empty checkout', async function ({ create }, t) {
   await db.close()
 })
 
-test.bee2('checkout session', async function ({ create }, t) {
+test.bee2('transaction discards dry-run writes', async function ({ create }, t) {
   const db = await create()
 
   await db.insert('@db/members', { id: 'a', age: 40 })
   await db.flush()
 
-  const session = db.session({ timeout: 100 })
-  t.is(session.engineSnapshot.snapshot.config.timeout, 100)
+  const tx = db.transaction({ timeout: 100 })
+  t.is(tx.engineSnapshot.snapshot.config.timeout, 100)
 
   await db.insert('@db/members', { id: 'b', age: 41 })
   await db.flush()
 
-  t.ok(await session.get('@db/members', { id: 'a' }))
-  t.absent(await session.get('@db/members', { id: 'b' }))
+  t.ok(await tx.get('@db/members', { id: 'a' }))
+  t.absent(await tx.get('@db/members', { id: 'b' }))
 
-  await session.insert('@db/members', { id: 'c', age: 42 })
+  await tx.insert('@db/members', { id: 'c', age: 42 })
 
-  t.ok(await session.get('@db/members', { id: 'c' }))
+  t.ok(await tx.get('@db/members', { id: 'c' }))
 
   t.ok(await db.get('@db/members', { id: 'a' }))
   t.ok(await db.get('@db/members', { id: 'b' }))
   t.absent(await db.get('@db/members', { id: 'c' }))
 
-  await session.close()
-  await db.close()
-})
-
-test.bee2('checkout session timeout', async function ({ create }, t) {
-  const db = await create()
-  await db.ready()
-
-  // checking out a block that doesnt exist yet
-  const session = db.session({ timeout: 100, length: db.core.length + 1 })
-
-  await t.exception(session.get('@db/members', { id: 'a' }), /REQUEST_TIMEOUT/)
-
-  await session.close()
+  await tx.close()
   await db.close()
 })
 
@@ -104,7 +91,9 @@ test.bee2('transaction timeout', async function ({ create }, t) {
   const db = await create()
   await db.ready()
 
-  const tx = db.transaction({ timeout: 100, length: db.core.length + 1 })
+  // Select an unavailable head; snapshot() itself does not accept a length.
+  db.db.move({ length: db.core.length + 1 })
+  const tx = db.transaction({ timeout: 100 })
 
   await t.exception(tx.get('@db/members', { id: 'a' }), /REQUEST_TIMEOUT/)
 

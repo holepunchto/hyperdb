@@ -455,7 +455,8 @@ class HyperDB {
     this.engine = null
   }
 
-  _createSnapshot(rootInstance, writable, context, opts) {
+  _createSnapshot(rootInstance, writable, context, options) {
+    const opts = engineOptions(options)
     const snapshotOptions = opts ? { ...this.snapshotOptions, ...opts } : this.snapshotOptions
     const snapshot = opts
       ? this.engine.snapshotFrom(this.engineSnapshot, snapshotOptions)
@@ -787,6 +788,13 @@ class HyperDB {
 
 function maybeClosed(db) {
   if (db.closing !== null) throw new Error('Hyperdb is closed')
+}
+
+// strips hyperdb-level options, returns null if nothing is left for the engine
+function engineOptions(options) {
+  if (!options) return null
+  const { context, ...opts } = options
+  return Object.keys(opts).length > 0 ? opts : null
 }
 
 function withinRange(range, key) {

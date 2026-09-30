@@ -274,7 +274,7 @@ class HyperDB {
     definition,
     {
       versions = definition.versions,
-      snapshotOptions = null,
+      snapshotOptions = {},
       snapshot = engine.snapshot(snapshotOptions),
       updates = new Updates(1, []),
       rootInstance = null,
@@ -455,8 +455,7 @@ class HyperDB {
     this.engine = null
   }
 
-  _createSnapshot(rootInstance, writable, context, options) {
-    const opts = options ? this.engine.snapshotOptions(options) : null
+  _createSnapshot(rootInstance, writable, context, opts) {
     const snapshotOptions = opts ? { ...this.snapshotOptions, ...opts } : this.snapshotOptions
     const snapshot = opts
       ? this.engine.snapshotFrom(this.engineSnapshot, snapshotOptions)

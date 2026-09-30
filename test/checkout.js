@@ -66,6 +66,13 @@ test.bee2('transaction discards dry-run writes', async function ({ create }, t) 
   await db.insert('@db/members', { id: 'a', age: 40 })
   await db.flush()
 
+  const snapshot = db.engineSnapshot
+  db.update()
+  t.is(db.engineSnapshot, snapshot, 'current update reuses the snapshot')
+  const ordinary = db.transaction()
+  t.is(ordinary.engineSnapshot, snapshot, 'ordinary transaction reuses the snapshot')
+  await ordinary.close()
+
   const tx = db.transaction({ timeout: 100 })
   t.is(tx.engineSnapshot.snapshot.config.timeout, 100)
 

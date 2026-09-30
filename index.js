@@ -738,6 +738,10 @@ class HyperDB {
     maybeClosed(this)
 
     const outdated = this.engine.outdated(this.engineSnapshot)
+    const hasTimeout = options && options.timeout !== undefined
+
+    if (!outdated && !hasTimeout) return
+
     const snapshot = this.engine.snapshot(options || {})
 
     if (outdated) {

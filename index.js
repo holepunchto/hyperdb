@@ -473,24 +473,6 @@ class HyperDB {
     return this._createSnapshot(this, false, context)
   }
 
-  session(options) {
-    maybeClosed(this)
-
-    const context = (options && options.context) || this.context
-    const checkout = options ? { ...this.engine.head(), ...options } : this.engine.head()
-
-    const snapshot = this.engine.checkout(checkout)
-    if (snapshot === null) throw new Error('Invalid snapshot')
-
-    return new HyperDB(this.engine, this.definition, {
-      versions: this.versions,
-      snapshot,
-      rootInstance: this.rootInstance,
-      writable: this.writable,
-      context
-    })
-  }
-
   // in future major, lets move transaction to be exclusive (aka sync) always
   async exclusiveTransaction(options) {
     await this.engine.enter()
@@ -513,22 +495,8 @@ class HyperDB {
 
     const context = (options && options.context) || this.context
 
-    if (options) {
-      const snapshot = this.engine.checkout({ ...this.engine.head(), ...options })
-      if (snapshot === null) throw new Error('Invalid snapshot')
-
-      return new HyperDB(this.engine, this.definition, {
-        versions: this.versions,
-        snapshot,
-        updates: this.updates.ref(),
-        rootInstance: this,
-        writable: true,
-        context
-      })
-    }
-
     const tx = this._createSnapshot(this, true, context)
-    tx.update()
+    tx.update(options)
     return tx
   }
 
@@ -766,18 +734,21 @@ class HyperDB {
     await Promise.all(promises)
   }
 
-  update() {
+  update(options) {
     maybeClosed(this)
 
-    if (!this.engine.outdated(this.engineSnapshot)) return
+    const outdated = this.engine.outdated(this.engineSnapshot)
+    const snapshot = this.engine.snapshot(options || {})
 
-    if (this.updates.refs > 1) this.updates = this.updates.detach()
-    this.updates.flush()
+    if (outdated) {
+      if (this.updates.refs > 1) this.updates = this.updates.detach()
+      this.updates.flush()
+    }
 
     this.engineSnapshot.unref()
-    this.engineSnapshot = this.engine.snapshot()
+    this.engineSnapshot = snapshot
 
-    if (this.watchers !== null) {
+    if (outdated && this.watchers !== null) {
       for (const fn of this.watchers) fn()
     }
   }

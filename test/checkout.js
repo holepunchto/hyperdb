@@ -107,3 +107,35 @@ test.bee2('transaction timeout', async function ({ create }, t) {
   await tx.close()
   await db.close()
 })
+
+test.bee2('snapshot options keep the parent position', async function ({ create }, t) {
+  const db = await create()
+
+  await db.insert('@db/members', { id: 'a', age: 40 })
+  await db.flush()
+
+  // pending write on root, then a commit past it leaves root outdated
+  await db.insert('@db/members', { id: 'p', age: 1 })
+  const ahead = db.transaction()
+  await ahead.insert('@db/members', { id: 'b', age: 41 })
+  await ahead.flush()
+
+  const snap = db.snapshot({ timeout: 100, wait: false })
+  t.is(snap.engineSnapshot.snapshot.config.timeout, 100)
+  t.is(snap.engineSnapshot.snapshot.config.wait, false)
+  t.absent(await snap.get('@db/members', { id: 'b' }), 'stays at root position')
+
+  const child = snap.snapshot({ timeout: 200 })
+  t.is(child.engineSnapshot.snapshot.config.timeout, 200)
+  t.is(child.engineSnapshot.snapshot.config.wait, false, 'inherits wait')
+
+  const tx = db.transaction({ timeout: 100 })
+  t.is(tx.updates.size, 0, 'drops stale pending writes')
+  t.ok(await tx.get('@db/members', { id: 'b' }))
+  t.is(tx.engineSnapshot.snapshot.config.timeout, 100, 'keeps options after update')
+
+  await child.close()
+  await snap.close()
+  await tx.close()
+  await db.close()
+})

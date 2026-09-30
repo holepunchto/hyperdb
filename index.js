@@ -274,7 +274,8 @@ class HyperDB {
     definition,
     {
       versions = definition.versions,
-      snapshot = engine.snapshot(),
+      snapshotOptions = null,
+      snapshot = engine.snapshot(snapshotOptions),
       updates = new Updates(1, []),
       rootInstance = null,
       writable = true,
@@ -282,6 +283,7 @@ class HyperDB {
     } = {}
   ) {
     this.versions = versions
+    this.snapshotOptions = snapshotOptions
     this.context = context
     this.index = 0 // for the session
     this.engine = engine
@@ -453,11 +455,16 @@ class HyperDB {
     this.engine = null
   }
 
-  _createSnapshot(rootInstance, writable, context) {
-    const snapshot = this.engineSnapshot.ref()
+  _createSnapshot(rootInstance, writable, context, options) {
+    const opts = options ? this.engine.snapshotOptions(options) : null
+    const snapshotOptions = opts ? { ...this.snapshotOptions, ...opts } : this.snapshotOptions
+    const snapshot = opts
+      ? this.engine.snapshotFrom(this.engineSnapshot, snapshotOptions)
+      : this.engineSnapshot.ref()
 
     return new HyperDB(this.engine, this.definition, {
       versions: this.versions,
+      snapshotOptions,
       snapshot,
       updates: this.updates.ref(),
       rootInstance,
@@ -470,7 +477,7 @@ class HyperDB {
     maybeClosed(this)
 
     const context = (options && options.context) || this.context
-    return this._createSnapshot(this, false, context)
+    return this._createSnapshot(this, false, context, options)
   }
 
   // in future major, lets move transaction to be exclusive (aka sync) always
@@ -494,9 +501,10 @@ class HyperDB {
     }
 
     const context = (options && options.context) || this.context
+    const tx = this._createSnapshot(this, true, context, options)
 
-    const tx = this._createSnapshot(this, true, context)
-    tx.update(options)
+    tx.update()
+
     return tx
   }
 
@@ -734,25 +742,18 @@ class HyperDB {
     await Promise.all(promises)
   }
 
-  update(options) {
+  update() {
     maybeClosed(this)
 
-    const outdated = this.engine.outdated(this.engineSnapshot)
-    const hasTimeout = options && options.timeout !== undefined
+    if (!this.engine.outdated(this.engineSnapshot)) return
 
-    if (!outdated && !hasTimeout) return
-
-    const snapshot = this.engine.snapshot(options || {})
-
-    if (outdated) {
-      if (this.updates.refs > 1) this.updates = this.updates.detach()
-      this.updates.flush()
-    }
+    if (this.updates.refs > 1) this.updates = this.updates.detach()
+    this.updates.flush()
 
     this.engineSnapshot.unref()
-    this.engineSnapshot = snapshot
+    this.engineSnapshot = this.engine.snapshot(this.snapshotOptions)
 
-    if (outdated && this.watchers !== null) {
+    if (this.watchers !== null) {
       for (const fn of this.watchers) fn()
     }
   }

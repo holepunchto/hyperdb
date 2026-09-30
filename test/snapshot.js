@@ -123,3 +123,46 @@ test('root close waits for snapshot closes', async function ({ create }, t) {
   t.ok(snap.closed)
   t.ok(snapOfSnap.closed)
 })
+
+test('context-only options share the parent snapshot', async function ({ create }, t) {
+  const db = await create()
+
+  await db.insert('@db/members', { id: 'a', age: 40 })
+  await db.flush()
+
+  const context = {}
+
+  const snap = db.snapshot({ context })
+  t.is(snap.context, context)
+  t.is(snap.engineSnapshot, db.engineSnapshot, 'snapshot reuses the engine snapshot')
+  t.absent('context' in snap.snapshotOptions, 'context is not an engine option')
+
+  const tx = db.transaction({ context })
+  t.is(tx.context, context)
+  t.is(tx.engineSnapshot, db.engineSnapshot, 'transaction reuses the engine snapshot')
+  t.absent('context' in tx.snapshotOptions, 'context is not an engine option')
+
+  await snap.close()
+  await tx.close()
+  await db.close()
+})
+
+test('passing snapshot options works on every engine', async function ({ create }, t) {
+  const db = await create()
+
+  await db.insert('@db/members', { id: 'a', age: 40 })
+  await db.flush()
+
+  const snap = db.snapshot({ timeout: 1000 })
+  t.alike(await snap.get('@db/members', { id: 'a' }), { id: 'a', age: 40 })
+
+  const tx = db.transaction({ timeout: 1000 })
+  t.alike(await tx.get('@db/members', { id: 'a' }), { id: 'a', age: 40 })
+  await tx.insert('@db/members', { id: 'b', age: 41 })
+  await tx.flush()
+
+  t.alike(await db.get('@db/members', { id: 'b' }), { id: 'b', age: 41 })
+
+  await snap.close()
+  await db.close()
+})

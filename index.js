@@ -784,6 +784,10 @@ class HyperDB {
     if (this.updates.size > 0) await this._flush()
     if (this.autoClose === true) await this.close()
   }
+
+  download() {
+    return this.engine.download()
+  }
 }
 
 function maybeClosed(db) {

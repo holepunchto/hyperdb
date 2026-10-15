@@ -1,6 +1,7 @@
 const { test } = require('./helpers')
 const tmp = require('test-tmp')
 const path = require('path')
+const fs = require('fs')
 
 test.bee('define versionField on collection', async function ({ build }, t) {
   const dir = await tmp(t, { dir: path.join(__dirname, 'fixtures/tmp') })
@@ -34,6 +35,26 @@ test.bee('define versionField on collection', async function ({ build }, t) {
 
   await dbVersions.close()
 })
+
+test.bee(
+  'a versioned collection value inherits the framed flag of its schema',
+  async function ({ build }, t) {
+    const framedDir = await tmp(t, { dir: path.join(__dirname, 'fixtures/tmp') })
+    const framedDb = await build(createVersionedDB, { dir: framedDir })
+    const framed = fs.readFileSync(path.join(framedDir, 'hyperdb', 'messages.js'), 'utf8')
+    t.ok(framed.includes('// framed version'), 'a versioned value is framed by default')
+    await framedDb.close()
+
+    const unframedDir = await tmp(t, { dir: path.join(__dirname, 'fixtures/tmp') })
+    const unframedDb = await build(createUnframedVersionedDB, { dir: unframedDir })
+    const unframed = fs.readFileSync(path.join(unframedDir, 'hyperdb', 'messages.js'), 'utf8')
+    t.absent(
+      unframed.includes('// framed version'),
+      'framed: false carries through to the derived value'
+    )
+    await unframedDb.close()
+  }
+)
 
 test.bee('versioned collection schema maps old rows on read', async function ({ build }, t) {
   const dir = await tmp(t, { dir: path.join(__dirname, 'fixtures/tmp') })
@@ -198,6 +219,37 @@ function createVersionedDB(HyperDB, Hyperschema, paths) {
 
   example.register({
     name: 'thing',
+    versions: [
+      {
+        version: 1,
+        type: '@example/thing-v1'
+      }
+    ]
+  })
+
+  Hyperschema.toDisk(schema)
+
+  const db = HyperDB.from(paths.schema, paths.db)
+  const exampleDB = db.namespace('example')
+
+  exampleDB.collections.register({
+    name: 'things',
+    schema: '@example/thing',
+    key: ['id']
+  })
+
+  HyperDB.toDisk(db)
+}
+
+function createUnframedVersionedDB(HyperDB, Hyperschema, paths) {
+  const schema = Hyperschema.from(paths.schema)
+  const example = schema.namespace('example')
+
+  registerThingV1(example)
+
+  example.register({
+    name: 'thing',
+    framed: false,
     versions: [
       {
         version: 1,

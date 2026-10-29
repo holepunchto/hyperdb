@@ -294,6 +294,7 @@ class HyperDB {
     this.watchers = null
     this.closing = null
     this.activeRequests = []
+    this.streams = []
 
     this.engine.sessions.add(this)
   }
@@ -435,6 +436,7 @@ class HyperDB {
 
   async _close() {
     this.engine.clearRequests(this.activeRequests)
+    for (const stream of this.streams) this.engine.clearRequests(stream.activeRequests)
 
     this.updates.unref()
     this.updates = null

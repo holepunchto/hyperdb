@@ -194,6 +194,82 @@ test('requests are cleared on close from unclosed snap', async function ({ creat
 })
 
 test(
+  'requests are cleared on close for open streams',
+  { rocks: false },
+  async function ({ create }, t) {
+    const db = await create()
+
+    await db.insert('@db/members', { id: 'someone', age: 40 })
+    await db.flush()
+
+    const clone = await create({ key: db.core.key, autoUpdate: true })
+
+    const unreplicate = replicate(t, clone, db)
+
+    await new Promise((resolve) => clone.core.once('append', resolve))
+
+    await unreplicate()
+
+    const members = clone.find('@db/members').toArray()
+    const cancelled = t.exception(members, /REQUEST_CANCELLED/)
+
+    await new Promise((resolve) => setTimeout(resolve, 10))
+
+    await clone.close()
+
+    await cancelled
+
+    t.teardown(async () => {
+      await db.close()
+      await clone.close()
+    })
+  }
+)
+
+test(
+  'destroying a stream does not cancel other requests',
+  { rocks: false },
+  async function ({ create }, t) {
+    const db = await create()
+
+    const tx = db.transaction()
+    for (let i = 0; i < 2000; i++) {
+      await tx.insert('@db/members', { id: 'member-' + String(i).padStart(4, '0'), age: i })
+    }
+    await tx.flush()
+
+    const clone = await create({ key: db.core.key, autoUpdate: true })
+
+    replicate(t, clone, db)
+
+    await new Promise((resolve) => clone.core.once('append', resolve))
+
+    const snap = clone.snapshot()
+
+    const range = { gte: { id: 'member-0000' }, lte: { id: 'member-0001' } }
+
+    for await (const member of snap.find('@db/members', range)) {
+      t.is(member.id, 'member-0000')
+      break
+    }
+
+    let member = null
+
+    await t.execution(async () => {
+      member = await snap.get('@db/members', { id: 'member-1000' })
+    }, 'get after destroying the stream does not error')
+
+    t.alike(member, { id: 'member-1000', age: 1000 })
+
+    t.teardown(async () => {
+      await snap.close()
+      await db.close()
+      await clone.close()
+    })
+  }
+)
+
+test(
   'download makes the db readable offline',
   { rocks: false, bee: false },
   async function ({ create }, t) {

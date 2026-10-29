@@ -294,7 +294,7 @@ class HyperDB {
     this.watchers = null
     this.closing = null
     this.activeRequests = []
-    this.streams = new Set()
+    this.streams = []
 
     this.engine.sessions.add(this)
   }

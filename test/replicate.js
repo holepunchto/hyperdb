@@ -232,10 +232,11 @@ test(
   async function ({ create }, t) {
     const db = await create()
 
+    const tx = db.transaction()
     for (let i = 0; i < 2000; i++) {
-      await db.insert('@db/members', { id: 'member-' + String(i).padStart(4, '0'), age: i })
+      await tx.insert('@db/members', { id: 'member-' + String(i).padStart(4, '0'), age: i })
     }
-    await db.flush()
+    await tx.flush()
 
     const clone = await create({ key: db.core.key, autoUpdate: true })
 
@@ -252,7 +253,13 @@ test(
       break
     }
 
-    t.alike(await snap.get('@db/members', { id: 'member-1000' }), { id: 'member-1000', age: 1000 })
+    let member = null
+
+    await t.execution(async () => {
+      member = await snap.get('@db/members', { id: 'member-1000' })
+    }, 'get after destroying the stream does not error')
+
+    t.alike(member, { id: 'member-1000', age: 1000 })
 
     t.teardown(async () => {
       await snap.close()

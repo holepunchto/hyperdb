@@ -4,7 +4,6 @@ const b4a = require('b4a')
 
 // engines
 const RocksEngine = require('./lib/engine/rocks.js')
-const BeeEngine = require('./lib/engine/bee.js')
 const Bee2Engine = require('./lib/engine/bee2.js')
 
 let compareHasDups = false
@@ -311,24 +310,13 @@ class HyperDB {
     return new HyperDB(engine, def.compat(definition), options)
   }
 
-  static bee(core, definition, options = {}) {
-    const extension = options.extension
-    const autoUpdate = !!options.autoUpdate
-    const trace = options.trace || null
-    const engine = new BeeEngine(core, { extension, trace })
-
-    const db = new HyperDB(engine, def.compat(definition), options)
-
-    if (autoUpdate) {
-      const update = db.update.bind(db)
-      core.on('append', update)
-      core.on('truncate', update)
-    }
-
-    return db
+  static bee2(bee, definition, options) {
+    return HyperDB.bee(bee, definition, options)
   }
 
-  static bee2(bee, definition, options = {}) {
+  static bee(bee, definition, options = {}) {
+    if (!bee.createChangesStream) throw new Error('Only Hyperbee2 is supported')
+
     const { autoUpdate = false, trace = null, key = null, length = -1 } = options
 
     const engine = new Bee2Engine(bee, { trace, key, length })
@@ -398,10 +386,9 @@ class HyperDB {
     return this.closing
   }
 
-  changes(range = {}) {
+  batches(options = {}) {
     maybeClosed(this)
-    const snap = range.live ? null : this.engineSnapshot
-    return this.engine.changes(snap, this.versions, this.definition, range)
+    return this.engine.batches(this.engineSnapshot, this.versions, this.definition, options)
   }
 
   diff(collectionName, query = {}) {

@@ -1,4 +1,5 @@
-const Hyperbee = require('hyperbee2')
+const Hypercore = require('hypercore')
+const HyperDB = require('../')
 const definition = require('./fixtures/definition')
 const { test } = require('./helpers')
 const tmp = require('test-tmp')
@@ -356,93 +357,131 @@ test('updates can be queryies', async function ({ create }, t) {
   await db.close()
 })
 
-test('changes - bee2', { bee2: true }, async function ({ create }, t) {
+test.bee2('batches', async function ({ create }, t) {
   const db = await create()
-
-  if (!db.core) {
-    t.comment('not supported on rocks')
-    await db.close()
-    return
-  }
   await db.ready()
-
-  if (!(db.engine.db instanceof Hyperbee)) {
-    t.comment('only for bee2')
-    await db.close()
-    return
-  }
-
-  {
-    const head = db.engine.head()
-    await db.insert('@db/members', { id: 'maf', age: 50 })
-    await db.insert('@db/members', { id: 'andrew', age: 40 })
-    await db.flush()
-
-    const ops = []
-    for await (const op of db.changes({ from: head })) ops.push(op)
-
-    const latest = db.engine.head()
-    t.alike(ops, [
-      { type: 'insert', head: latest, collection: '@db/members', value: { id: 'andrew', age: 40 } },
-      { type: 'insert', head: latest, collection: '@db/members', value: { id: 'maf', age: 50 } }
-    ])
-  }
-
-  {
-    const head = db.engine.head()
-    await db.delete('@db/members', { id: 'andrew' })
-    await db.flush()
-
-    const ops = []
-    t.comment('deleted')
-    for await (const op of db.changes({ from: head })) ops.push(op)
-
-    const latest = db.engine.head()
-    t.alike(ops, [
-      { type: 'delete', head: latest, collection: '@db/members', value: { id: 'andrew' } }
-    ])
-  }
-
-  await db.close()
-})
-
-test('changes', { bee2: false }, async function ({ create }, t) {
-  const db = await create()
-
-  if (!db.core) {
-    t.comment('not supported on rocks')
-    await db.close()
-    return
-  }
 
   await db.insert('@db/members', { id: 'maf', age: 50 })
   await db.insert('@db/members', { id: 'andrew', age: 40 })
   await db.flush()
 
-  let ops = []
-  for await (const op of db.changes()) ops.push(op)
-
-  t.alike(ops, [
-    { type: 'insert', seq: 2, collection: '@db/members', value: { id: 'andrew', age: 40 } },
-    { type: 'insert', seq: 4, collection: '@db/members', value: { id: 'maf', age: 50 } }
-  ])
+  const first = db.engine.head()
 
   await db.delete('@db/members', { id: 'andrew' })
+  await db.insert('@db/members', { id: 'maf', age: 51 })
   await db.flush()
 
-  ops = []
-  for await (const op of db.changes()) ops.push(op)
+  const second = db.engine.head()
+  const snap = db.snapshot()
 
-  t.alike(ops, [
-    { type: 'insert', seq: 2, collection: '@db/members', value: { id: 'andrew', age: 40 } },
-    { type: 'insert', seq: 4, collection: '@db/members', value: { id: 'maf', age: 50 } },
-    { type: 'delete', seq: 6, collection: '@db/members', value: { id: 'andrew' } }
+  await db.delete('@db/members', { id: 'maf' })
+  await db.flush()
+
+  const third = db.engine.head()
+
+  const expected = [
+    { head: third, tail: second, inserts: [] },
+    {
+      head: second,
+      tail: first,
+      inserts: [{ collection: '@db/members', value: { id: 'maf', age: 51 } }]
+    },
+    {
+      head: first,
+      tail: null,
+      inserts: [
+        { collection: '@db/members', value: { id: 'andrew', age: 40 } },
+        { collection: '@db/members', value: { id: 'maf', age: 50 } }
+      ]
+    }
+  ]
+
+  t.alike(await toArray(db.batches()), expected)
+  t.alike(await toArray(db.batches({ head: second })), expected.slice(1))
+  t.alike(await toArray(snap.batches()), expected.slice(1), 'snapshot is locked in time')
+
+  await snap.close()
+  await db.close()
+})
+
+test.bee2('batches - empty db', async function ({ create }, t) {
+  const db = await create()
+  await db.ready()
+
+  t.alike(await toArray(db.batches()), [])
+
+  await db.close()
+})
+
+test.bee2('batches - does not include index entries', async function ({ create }, t) {
+  const db = await create()
+  await db.ready()
+
+  await db.insert('@db/members', { id: 'maf', age: 50 })
+  await db.flush()
+
+  t.alike(await db.find('@db/members-by-age').toArray(), [{ id: 'maf', age: 50 }])
+
+  const [batch] = await toArray(db.batches())
+  t.alike(batch.inserts, [{ collection: '@db/members', value: { id: 'maf', age: 50 } }])
+
+  await db.close()
+})
+
+test.bee2('batches - values stored outside the key block', async function ({ build }, t) {
+  const db = await build(createDB)
+  await db.ready()
+
+  const bio = 'a'.repeat(64 * 1024)
+
+  await db.insert('@db/profiles', { id: 'maf', bio })
+  await db.insert('@db/profiles', { id: 'andrew', bio: 'short' })
+  await db.flush()
+
+  const [raw] = await toArray(db.engine.db.createChangesStream())
+  t.ok(
+    raw.batch.some((blk) => blk.values && blk.values.length > 0),
+    'value is not inlined'
+  )
+
+  const [batch] = await toArray(db.batches())
+  t.alike(batch.inserts, [
+    { collection: '@db/profiles', value: { id: 'andrew', bio: 'short' } },
+    { collection: '@db/profiles', value: { id: 'maf', bio } }
   ])
 
-  ops = []
-  for await (const op of db.changes({ gt: 4 })) ops.push(op)
+  await db.close()
 
-  t.alike(ops, [{ type: 'delete', seq: 6, collection: '@db/members', value: { id: 'andrew' } }])
+  function createDB(HyperDB, Hyperschema, paths) {
+    const schema = Hyperschema.from(paths.schema)
+    const ns = schema.namespace('db')
+
+    ns.register({
+      name: 'profile',
+      fields: [
+        { name: 'id', type: 'string', required: true },
+        { name: 'bio', type: 'string', required: true }
+      ]
+    })
+
+    Hyperschema.toDisk(schema)
+
+    const db = HyperDB.from(paths.schema, paths.db)
+
+    db.namespace('db').collections.register({
+      name: 'profiles',
+      schema: '@db/profile',
+      key: ['id']
+    })
+
+    HyperDB.toDisk(db)
+  }
+})
+
+test.rocks('batches - not supported', async function ({ create }, t) {
+  const db = await create()
+
+  t.exception(() => db.batches(), /Not supported/)
 
   await db.close()
 })
@@ -465,7 +504,7 @@ test('update does not break existing snaps', async function ({ create }, t) {
   await db.close()
 })
 
-test('nested keys', { bee2: false }, async function ({ create, bee }, t) {
+test('nested keys', async function ({ create }, t) {
   const db = await create({ fixture: 4 })
 
   await db.insert('@db/nested-members', { member: { id: 'maf', age: 50 }, fun: true })
@@ -481,34 +520,6 @@ test('nested keys', { bee2: false }, async function ({ create, bee }, t) {
 
   await db.delete('@db/nested-members', { member: { id: 'andrew' } })
   await db.flush()
-
-  if (bee) {
-    t.comment('only test changes feed on bee engine')
-
-    const ops = []
-    for await (const op of db.changes()) ops.push(op)
-
-    t.alike(ops, [
-      {
-        type: 'insert',
-        seq: 1,
-        collection: '@db/nested-members',
-        value: { member: { id: 'andrew', age: 40 }, fun: false }
-      },
-      {
-        type: 'insert',
-        seq: 2,
-        collection: '@db/nested-members',
-        value: { member: { id: 'maf', age: 50 }, fun: true }
-      },
-      {
-        type: 'delete',
-        seq: 3,
-        collection: '@db/nested-members',
-        value: { member: { id: 'andrew' } }
-      }
-    ])
-  }
 
   await db.close()
 })
@@ -686,7 +697,7 @@ test('exclusive transactions', async function ({ create }, t) {
   await db.close()
 })
 
-test('enum as key type', async function ({ create, bee }, t) {
+test('enum as key type', async function ({ create }, t) {
   const db = await create({ fixture: 6 })
   const builder = require('./fixtures/generated/6/hyperschema')
   const { NotSpecified, Male, Female } = builder.getEnum('@db/gender')
@@ -732,4 +743,18 @@ test('flushing with pending insert/delete throws', async ({ create }, t) => {
   }
 
   await db.close()
+})
+
+async function toArray(stream) {
+  const all = []
+  for await (const data of stream) all.push(data)
+  return all
+}
+
+test.bee2('bee - only hyperbee2 is supported', async function (_, t) {
+  const core = new Hypercore(await tmp(t))
+
+  t.exception(() => HyperDB.bee(core, definition), /Only Hyperbee2 is supported/)
+
+  await core.close()
 })

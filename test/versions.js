@@ -2,7 +2,7 @@ const { test } = require('./helpers')
 const tmp = require('test-tmp')
 const path = require('path')
 
-test.bee('define versionField on collection', async function ({ build }, t) {
+test.bee2('define versionField on collection', async function ({ build }, t) {
   const dir = await tmp(t, { dir: path.join(__dirname, 'fixtures/tmp') })
 
   const db = await build(createExampleDB, { dir })
@@ -35,7 +35,7 @@ test.bee('define versionField on collection', async function ({ build }, t) {
   await dbVersions.close()
 })
 
-test.bee('versioned collection schema maps old rows on read', async function ({ build }, t) {
+test.bee2('versioned collection schema maps old rows on read', async function ({ build }, t) {
   const dir = await tmp(t, { dir: path.join(__dirname, 'fixtures/tmp') })
 
   const db = await build(createVersionedDB, { dir })
@@ -53,7 +53,7 @@ test.bee('versioned collection schema maps old rows on read', async function ({ 
   t.alike(row, { version: 2, id: 'a', name: 'hello' })
 })
 
-test.bee('key path through a nested versioned field resolves', async function ({ build }, t) {
+test.bee2('key path through a nested versioned field resolves', async function ({ build }, t) {
   const dir = await tmp(t, { dir: path.join(__dirname, 'fixtures/tmp') })
 
   const db = await build(createNestedVersionedDB, { dir })

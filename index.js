@@ -656,12 +656,13 @@ class HyperDB {
 
       for (let i = 0; i < collection.indexes.length; i++) {
         const idx = collection.indexes[i]
-        if (idx.version > prevVersion) continue
-
-        const del = idx.encodeIndexKeys(prevDoc, this.context)
         const ups = []
 
         u.indexes.push(ups)
+
+        if (idx.version > prevVersion) continue
+
+        const del = idx.encodeIndexKeys(prevDoc, this.context)
 
         for (let j = 0; j < del.length; j++) ups.push({ key: del[j], value: null })
       }
@@ -713,7 +714,8 @@ class HyperDB {
         const idx = collection.indexes[i]
         const prevKeys =
           idx.version <= prevVersion ? idx.encodeIndexKeys(prevDoc, this.context) : []
-        const nextKeys = idx.encodeIndexKeys(record, this.context)
+        const nextKeys =
+          idx.version <= collectionVersion ? idx.encodeIndexKeys(record, this.context) : []
         const ups = []
 
         u.indexes.push(ups)

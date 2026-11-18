@@ -213,6 +213,113 @@ test('new index on an old collection', async function ({ build }, t) {
   await dbNewIndex.close()
 })
 
+test('new index is not written below its db version', async function ({ build }, t) {
+  const dir = await tmp(t, { dir: path.join(__dirname, 'fixtures/tmp') })
+  const db = await build(createExampleDB, { dir })
+  await db.close()
+
+  const dbNewIndex = await build(createExampleDBWithNewIndex, { dir })
+  const versions = dbNewIndex.versions
+  const teenagers = dbNewIndex.definition.resolveIndex('@example/teenagers')
+
+  dbNewIndex.setVersions({ schema: versions.schema, db: teenagers.version })
+
+  await dbNewIndex.insert('@example/members', { name: 'middle', age: 50 })
+  await dbNewIndex.flush()
+
+  {
+    const all = await dbNewIndex.find('@example/middle-age').toArray()
+    t.is(all.length, 0)
+  }
+
+  await dbNewIndex.insert('@example/members', { name: 'middle', age: 51 })
+  await dbNewIndex.flush()
+
+  {
+    const all = await dbNewIndex.find('@example/middle-age').toArray()
+    t.is(all.length, 0)
+  }
+
+  dbNewIndex.setVersions(versions)
+
+  await dbNewIndex.insert('@example/members', { name: 'middle', age: 51 })
+  await dbNewIndex.flush()
+
+  {
+    const all = await dbNewIndex.find('@example/middle-age').toArray()
+    t.alike(all, [{ name: 'middle', age: 51 }])
+  }
+
+  await dbNewIndex.close()
+})
+
+test('new index entry is removed by a rewrite below its db version', async function ({ build }, t) {
+  const dir = await tmp(t, { dir: path.join(__dirname, 'fixtures/tmp') })
+  const db = await build(createExampleDB, { dir })
+  await db.close()
+
+  const dbNewIndex = await build(createExampleDBWithNewIndex, { dir })
+  const versions = dbNewIndex.versions
+  const teenagers = dbNewIndex.definition.resolveIndex('@example/teenagers')
+
+  await dbNewIndex.insert('@example/members', { name: 'middle', age: 50 })
+  await dbNewIndex.flush()
+
+  {
+    const all = await dbNewIndex.find('@example/middle-age').toArray()
+    t.is(all.length, 1)
+  }
+
+  dbNewIndex.setVersions({ schema: versions.schema, db: teenagers.version })
+
+  await dbNewIndex.insert('@example/members', { name: 'middle', age: 50 })
+  await dbNewIndex.flush()
+
+  {
+    const all = await dbNewIndex.find('@example/middle-age').toArray()
+    t.is(all.length, 0)
+  }
+
+  dbNewIndex.setVersions(versions)
+
+  await dbNewIndex.insert('@example/members', { name: 'middle', age: 51 })
+  await dbNewIndex.flush()
+
+  {
+    const all = await dbNewIndex.find('@example/middle-age').toArray()
+    t.alike(all, [{ name: 'middle', age: 51 }])
+  }
+
+  await dbNewIndex.close()
+})
+
+test('new index can be read after deleting an old row', async function ({ build }, t) {
+  const dir = await tmp(t, { dir: path.join(__dirname, 'fixtures/tmp') })
+  const db = await build(createExampleDB, { dir })
+
+  await db.insert('@example/members', { name: 'middle', age: 50 })
+  await db.flush()
+  await db.close()
+
+  const dbNewIndex = await build(createExampleDBWithNewIndex, { dir })
+  const tx = dbNewIndex.transaction()
+
+  await tx.delete('@example/members', { name: 'middle' })
+
+  {
+    const all = await tx.find('@example/middle-age').toArray()
+    t.is(all.length, 0)
+  }
+
+  {
+    const doc = await tx.get('@example/middle-age', 50)
+    t.is(doc, null)
+  }
+
+  await tx.close()
+  await dbNewIndex.close()
+})
+
 function createExampleDB(HyperDB, Hyperschema, paths) {
   const schema = Hyperschema.from(paths.schema)
   const example = schema.namespace('example')

@@ -302,21 +302,19 @@ test('new index can be read after deleting an old row', async function ({ build 
   await db.close()
 
   const dbNewIndex = await build(createExampleDBWithNewIndex, { dir })
-  const tx = dbNewIndex.transaction()
 
-  await tx.delete('@example/members', { name: 'middle' })
+  await dbNewIndex.delete('@example/members', { name: 'middle' })
 
   {
-    const all = await tx.find('@example/middle-age').toArray()
+    const all = await dbNewIndex.find('@example/middle-age').toArray()
     t.is(all.length, 0)
   }
 
   {
-    const doc = await tx.get('@example/middle-age', 50)
+    const doc = await dbNewIndex.get('@example/middle-age', 50)
     t.is(doc, null)
   }
 
-  await tx.close()
   await dbNewIndex.close()
 })
 

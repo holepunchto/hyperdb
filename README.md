@@ -106,9 +106,9 @@ It is that simple.
 
 ## API
 
-#### `db = Hyperdb.bee(hypercore, definition, [options])`
+#### `db = Hyperdb.bee(hyperbee, definition, [options])`
 
-Make a db backed by Hyperbee. P2P!
+Make a db backed by [Hyperbee2](https://github.com/holepunchto/hyperbee2). P2P!
 
 Available `options`:
 
@@ -203,23 +203,36 @@ interpret the insert as a delete for that item.
 
 Returns a boolean indicating if this database was updated since last time it was flushed. Pass a collection and doc query to know if a specific record was updated.
 
-#### `const stream = db.changes(range = {})`
+#### `const stream = db.batches(options = {})`
 
-Returns a stream of changes to the database. The `range` can have the
-following properties:
+Returns a stream of the batches written to the database, newest first. Each
+batch looks like this:
 
 ```
 {
-  gte: seq, // Start with this seq (inclusive)
-  gt: seq, // Start after this index
-  lte: seq, // Stop after this index
-  lt: seq, // Stop before this index
+  head, // the head of the database after this batch, ie. { key, length }
+  tail, // the head of the database before this batch, null for the first batch
+  inserts: [{ collection, value }] // the documents inserted or updated by this batch
 }
 ```
 
-`seq` is the sequence number for the underlying Hyperbee node.
+Deletes are not included, only the documents a batch wrote. A batch that only
+deleted documents is still streamed, with no `inserts`. To get the full set of
+changes, including deletes, use `db.diff()`.
 
-Only supported with Hyperbee engine.
+The `options` can have the following properties:
+
+```
+{
+  head, // start from this head instead of the current one
+  prefetch: 128 // how many blocks to download ahead in the background, 0 disables it
+}
+```
+
+To only read the batches written since a known head, destroy the stream when
+you reach a batch whose `tail` is that head.
+
+Only supported with the Hyperbee2 engine.
 
 #### `const stream = db.diff(collection, query = {})`
 
@@ -247,8 +260,7 @@ The `query` looks like this
 }
 ```
 
-`from` is a head, ie. `{ key, length }`, as returned by `db.engine.head()`, the
-same value `db.changes({ from })` takes. It defaults to the empty database, so
+`from` is a head, ie. `{ key, length }`, as returned by `db.engine.head()`. It defaults to the empty database, so
 `db.diff(collection)` streams every document as an insert.
 
 The range is bounded to the given collection, and documents are streamed in key

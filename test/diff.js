@@ -200,14 +200,6 @@ test.rocks('diff - not supported', async function ({ create }, t) {
   await db.close()
 })
 
-test.bee('diff - not supported', async function ({ create }, t) {
-  const db = await create()
-
-  t.exception(() => db.diff('@db/members'), /Not supported/)
-
-  await db.close()
-})
-
 async function toArray(stream) {
   const all = []
   for await (const data of stream) all.push(data)

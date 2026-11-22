@@ -734,22 +734,17 @@ test('flushing with pending insert/delete throws', async ({ create }, t) => {
   await db.close()
 })
 
-test.bee2(
-  'a record that fails to decode errors its collection stream',
-  async function ({ create }, t) {
-    const db = await create(definition)
-
-    await db.insert('members', { id: 'maf', age: 34 })
-    await db.flush()
-
-    const collection = db.definition.resolveCollection('members')
-    const key = collection.encodeKey({ id: 'maf' })
-    const w = db.engine.db.write()
-    w.tryPut(Buffer.from([key[0], 0xff]), Buffer.from([0]))
-    await w.flush()
-    await db.update()
-
-    await t.exception(db.find('members').toArray())
-    await db.close()
+test('a record that fails to finalize errors its collection stream', async function ({
+  create
+}, t) {
+  const trace = () => {
+    throw new Error('trace failed')
   }
-)
+  const db = await create(definition, { trace })
+
+  await db.insert('members', { id: 'maf', age: 34 })
+  await db.flush()
+
+  await t.exception(db.find('members').toArray(), /trace failed/)
+  await db.close()
+})

@@ -733,3 +733,18 @@ test('flushing with pending insert/delete throws', async ({ create }, t) => {
 
   await db.close()
 })
+
+test('a record that fails to finalize errors its collection stream', async function ({
+  create
+}, t) {
+  const trace = () => {
+    throw new Error('trace failed')
+  }
+  const db = await create(definition, { trace })
+
+  await db.insert('members', { id: 'maf', age: 34 })
+  await db.flush()
+
+  await t.exception(db.find('members').toArray(), /trace failed/)
+  await db.close()
+})
